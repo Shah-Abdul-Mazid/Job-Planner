@@ -16,7 +16,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database (MongoDB Atlas primary, SQLite local fallback)
-    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
+    MONGODB_USERNAME: str = os.getenv("MONGODB_USERNAME", "")
+    MONGODB_PASSWORD: str = os.getenv("MONGODB_PASSWORD", "")
+    MONGODB_URI: str = os.getenv(
+        "MONGODB_URI",
+        f"mongodb+srv://{os.getenv('MONGODB_USERNAME')}:{os.getenv('MONGODB_PASSWORD')}@jobappilcationdatabasec.zc4vzys.mongodb.net/?retryWrites=true&w=majority"
+        if os.getenv("MONGODB_USERNAME") and os.getenv("MONGODB_PASSWORD")
+        else "mongodb+srv://ezanshah58_db_user:tcB7vRP4jsbcgyT8@jobappilcationdatabasec.zc4vzys.mongodb.net/?retryWrites=true&w=majority"
+    )
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
         "sqlite:////tmp/careertrack.db"
