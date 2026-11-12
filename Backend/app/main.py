@@ -138,6 +138,15 @@ async def version():
     }
 
 
+# Mangum handler for serverless compatibility
+try:
+    from mangum import Mangum
+
+    handler = Mangum(app, lifespan="off")
+except Exception:
+    handler = app
+
+
 if __name__ == "__main__":
     import uvicorn
 

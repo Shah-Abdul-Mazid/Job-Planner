@@ -132,16 +132,20 @@ class MongoItemRepository:
         if date_filter:
             mongo_filter["application_date"] = date_filter
 
-        total = self.col.count_documents(mongo_filter)
-        direction = -1 if sort_order.lower() == "desc" else 1
-        cursor = (
-            self.col.find(mongo_filter)
-            .sort(sort_by, direction)
-            .skip(skip)
-            .limit(limit)
-        )
-        items = [self._doc_to_item_like(doc) for doc in cursor]
-        return items, total
+        try:
+            total = self.col.count_documents(mongo_filter)
+            direction = -1 if sort_order.lower() == "desc" else 1
+            cursor = (
+                self.col.find(mongo_filter)
+                .sort(sort_by, direction)
+                .skip(skip)
+                .limit(limit)
+            )
+            items = [self._doc_to_item_like(doc) for doc in cursor]
+            return items, total
+        except Exception as e:
+            print(f"[MongoItemRepository] List items error: {e}")
+            return [], 0
 
     def create(self, item_data: dict, choices: List[str]) -> dict:
         new_id = self._next_id()
@@ -175,49 +179,61 @@ class MongoItemRepository:
         self.col.delete_one({"id": db_item["id"]})
 
     def get_dashboard_metrics(self) -> Dict[str, Any]:
-        total_applications = self.col.count_documents({})
-        submitted_count = self.col.count_documents({"status": {"$in": ["Submitted", "Applied"]}})
-        shortlisted_count = self.col.count_documents({"status": "Shortlisted"})
-        rejected_count = self.col.count_documents({"status": "Rejected"})
-        pending_admit_cards = self.col.count_documents({"admit_card_available": {"$in": [False, None]}})
+        try:
+            total_applications = self.col.count_documents({})
+            submitted_count = self.col.count_documents({"status": {"$in": ["Submitted", "Applied"]}})
+            shortlisted_count = self.col.count_documents({"status": "Shortlisted"})
+            rejected_count = self.col.count_documents({"status": "Rejected"})
+            pending_admit_cards = self.col.count_documents({"admit_card_available": {"$in": [False, None]}})
 
-        today = date.today().isoformat()
-        thirty_days = (date.today() + timedelta(days=30)).isoformat()
-        upcoming_deadlines_count = self.col.count_documents({
-            "deadline": {"$gte": today, "$lte": thirty_days}
-        })
-
-        now = datetime.utcnow()
-        upcoming_exams_count = self.exam_col.count_documents({"exam_date": {"$gte": now}})
-
-        # Status distribution
-        pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
-        status_distribution = [
-            {"status": r["_id"], "count": r["count"]}
-            for r in self.col.aggregate(pipeline)
-        ]
-
-        # Recent activities
-        recent_docs = list(
-            self.col.find({}).sort("updated_at", -1).limit(5)
-        )
-        recent_activities = []
-        for a in recent_docs:
-            updated_at = a.get("updated_at")
-            created_at = a.get("created_at")
-            if isinstance(updated_at, datetime):
-                date_str = updated_at.isoformat()
-            else:
-                date_str = datetime.utcnow().isoformat()
-            action = "Updated status" if updated_at != created_at else "Created application"
-            recent_activities.append({
-                "id": a.get("id"),
-                "title": f"{a.get('organization_name', '')} — {a.get('post_name', '')}",
-                "job_id": a.get("job_id"),
-                "status": a.get("status"),
-                "date": date_str,
-                "action": action,
+            today = date.today().isoformat()
+            thirty_days = (date.today() + timedelta(days=30)).isoformat()
+            upcoming_deadlines_count = self.col.count_documents({
+                "deadline": {"$gte": today, "$lte": thirty_days}
             })
+
+            now = datetime.utcnow()
+            upcoming_exams_count = self.exam_col.count_documents({"exam_date": {"$gte": now}})
+
+            # Status distribution
+            pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
+            status_distribution = [
+                {"status": r["_id"], "count": r["count"]}
+                for r in self.col.aggregate(pipeline)
+            ]
+
+            # Recent activities
+            recent_docs = list(
+                self.col.find({}).sort("updated_at", -1).limit(5)
+            )
+            recent_activities = []
+            for a in recent_docs:
+                updated_at = a.get("updated_at")
+                created_at = a.get("created_at")
+                if isinstance(updated_at, datetime):
+                    date_str = updated_at.isoformat()
+                else:
+                    date_str = datetime.utcnow().isoformat()
+                action = "Updated status" if updated_at != created_at else "Created application"
+                recent_activities.append({
+                    "id": a.get("id"),
+                    "title": f"{a.get('organization_name', '')} — {a.get('post_name', '')}",
+                    "job_id": a.get("job_id"),
+                    "status": a.get("status"),
+                    "date": date_str,
+                    "action": action,
+                })
+        except Exception as e:
+            print(f"[MongoItemRepository] Metrics error: {e}")
+            total_applications = 0
+            submitted_count = 0
+            shortlisted_count = 0
+            rejected_count = 0
+            pending_admit_cards = 0
+            upcoming_deadlines_count = 0
+            upcoming_exams_count = 0
+            status_distribution = []
+            recent_activities = []
 
         return {
             "total_applications": total_applications,
