@@ -1,24 +1,38 @@
-import time
-from app.schemas.predict import PredictionRequest, PredictionResponse
+"""
+Inference Service — wraps MLModel + RecruitmentPipeline.
+"""
+
+from __future__ import annotations
+
 from app.ml.model import ml_model
 from app.ml.pipeline import pipeline
+from app.schemas.predict import PredictRequest, PredictResponse
 
 
 class InferenceService:
-    def run_prediction(self, request: PredictionRequest) -> PredictionResponse:
-        start_time = time.perf_counter()
+    def run_prediction(self, request: PredictRequest) -> PredictResponse:
+        # Pre-process
+        clean_text = pipeline.preprocess(request.text)
 
-        features = pipeline.preprocess(request.text)
-        raw_output = ml_model.predict(features)
-        output = pipeline.postprocess(raw_output)
+        # Predict
+        result = ml_model.predict(clean_text)
 
-        latency_ms = (time.perf_counter() - start_time) * 1000.0
+        # Post-process
+        enriched = pipeline.postprocess(
+            label=result.label,
+            confidence=result.confidence,
+            metadata=result.metadata,
+        )
 
-        return PredictionResponse(
-            label=output["label"],
-            confidence=output["confidence"],
-            score=output["score"],
-            latency_ms=round(latency_ms, 2),
+        return PredictResponse(
+            label=enriched["label"],
+            label_human=enriched["label_human"],
+            confidence=enriched["confidence"],
+            confidence_tier=enriched["confidence_tier"],
+            action=enriched["action"],
+            extracted=enriched["extracted"],
+            latency_ms=result.latency_ms,
+            model_device=ml_model.device,
         )
 
 

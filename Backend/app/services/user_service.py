@@ -1,27 +1,33 @@
-from typing import List, Optional
-from app.schemas.user import UserCreate, UserResponse
+from typing import Optional, List
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+from app.repositories.user_repository import UserRepository
+from app.schemas.user import UserCreate, UserLogin
 from app.models.user import User
-from app.repositories.user_repository import user_repo
-from app.core.security import get_password_hash
-
+from app.core.security import verify_password, create_access_token
 
 class UserService:
-    def list_users(self) -> List[UserResponse]:
-        return [UserResponse(id=u.id, name=u.name, email=u.email) for u in user_repo.get_all()]
+    def __init__(self, db: Session):
+        self.repo = UserRepository(db)
 
-    def get_user(self, user_id: int) -> Optional[UserResponse]:
-        user = user_repo.get_by_id(user_id)
-        if not user:
-            return None
-        return UserResponse(id=user.id, name=user.name, email=user.email)
+    def register(self, payload: UserCreate) -> User:
+        existing = self.repo.get_by_email(payload.email)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email already exists."
+            )
+        return self.repo.create(payload)
 
-    def create_user(self, data: UserCreate) -> UserResponse:
-        if user_repo.get_by_email(data.email):
-            raise ValueError(f"User with email '{data.email}' already exists.")
-        hashed = get_password_hash(data.password)
-        user = User(name=data.name, email=data.email, hashed_password=hashed)
-        saved = user_repo.create(user)
-        return UserResponse(id=saved.id, name=saved.name, email=saved.email)
+    def authenticate(self, payload: UserLogin) -> dict:
+        user = self.repo.get_by_email(payload.email)
+        if not user or not verify_password(payload.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials."
+            )
+        token = create_access_token({"sub": str(user.id), "email": user.email})
+        return {"access_token": token, "token_type": "bearer", "user": user}
 
-
-user_service = UserService()
+    def list_users(self, skip: int = 0, limit: int = 20) -> List[User]:
+        return self.repo.get_multi(skip=skip, limit=limit)

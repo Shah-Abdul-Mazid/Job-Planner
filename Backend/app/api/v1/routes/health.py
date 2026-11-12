@@ -1,16 +1,17 @@
+import platform, sys
+from datetime import datetime, timezone
 from fastapi import APIRouter
-from app.core.config import settings
-from app.ml.model import ml_model
-from app.schemas.predict import HealthResponse
 
-router = APIRouter(tags=["Health"])
+router = APIRouter()
 
-
-@router.get("/health", response_model=HealthResponse)
-async def health_check():
+@router.get("", summary="Health & readiness probe")
+async def health():
     return {
-        "status": "healthy",
-        "ai_status": "ready",
-        "ml_model_loaded": ml_model.is_loaded,
-        "device": settings.DEVICE,
+        "status": "ok",
+        "service": "CareerTrack BD API",
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "python": sys.version,
+        "platform": platform.system(),
+        "device": "cpu",
     }

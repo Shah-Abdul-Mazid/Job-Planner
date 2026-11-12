@@ -1,41 +1,75 @@
-import time
-from typing import AsyncGenerator
-from app.schemas.chat import ChatRequest, ChatResponse, ChatMessage
-from app.schemas.rag import RAGRequest, RAGResponse
+"""
+AI Service — orchestrates LLMClient + VectorRetriever for chat queries.
+"""
+
+from __future__ import annotations
+from datetime import datetime, timezone
+
 from app.ai.llm import llm_client
-from app.ai.rag import retriever
-from app.core.config import settings
+from app.ai.rag import vector_retriever
+from app.ai.prompt import CAREER_ASSISTANT_SYSTEM_PROMPT, RAG_SYSTEM_PROMPT
+from app.schemas.chat import ChatMessage, ChatResponse
+from app.schemas.rag import RAGRequest, RAGResponse, RetrievedDocument
 
 
 class AIService:
-    async def chat(self, request: ChatRequest) -> ChatResponse:
-        start_time = time.perf_counter()
-        response_text = await llm_client.generate_response(request.messages)
-        latency_ms = (time.perf_counter() - start_time) * 1000.0
+    async def handle_chat_query(
+        self, messages: list[ChatMessage], session_id: str = ""
+    ) -> ChatResponse:
+        user_text = ""
+        for m in reversed(messages):
+            if m.role == "user":
+                user_text = m.content
+                break
 
-        return ChatResponse(
-            message=ChatMessage(role="assistant", content=response_text),
-            model=settings.LLM_MODEL,
-            tokens_used=len(response_text.split()),
-            latency_ms=round(latency_ms, 2),
+        # Inject today's date so the LLM can compute "days until exam"
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        dated_messages = [
+            {"role": "user", "content": f"[Today: {today}] {user_text}"}
+        ]
+
+        response_text = await llm_client.generate_response(
+            messages=dated_messages,
+            system_prompt=CAREER_ASSISTANT_SYSTEM_PROMPT,
         )
 
-    async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
-        async for chunk in llm_client.stream_tokens(request.messages):
-            yield chunk
+        return ChatResponse(
+            response=response_text,
+            session_id=session_id or "local",
+            model=llm_client._call_openai_api.__name__ if llm_client.has_api else "rule-based",
+            tokens_used=None,
+        )
 
-    async def answer_rag(self, request: RAGRequest) -> RAGResponse:
-        start_time = time.perf_counter()
-        docs = retriever.search(request.query, top_k=request.top_k)
-        context = " ".join([d.text for d in docs])
-        answer = f"Based on retrieved context [{context[:60]}...], answer to '{request.query}' generated."
-        latency_ms = (time.perf_counter() - start_time) * 1000.0
+    async def handle_rag_query(self, request: RAGRequest) -> RAGResponse:
+        context = vector_retriever.build_context(request.query, top_k=request.top_k)
+        raw_docs = vector_retriever.query(request.query, top_k=request.top_k)
+
+        rag_prompt = (
+            f"{RAG_SYSTEM_PROMPT}\n\n"
+            f"## Context\n{context}\n\n"
+            f"## Question\n{request.query}"
+        )
+
+        answer = await llm_client.generate_response(
+            messages=[{"role": "user", "content": request.query}],
+            system_prompt=rag_prompt,
+        )
+
+        retrieved = [
+            RetrievedDocument(
+                id=d["id"],
+                title=d["title"],
+                content=d["content"],
+                score=d["score"],
+                metadata=d["metadata"],
+            )
+            for d in raw_docs
+        ]
 
         return RAGResponse(
-            query=request.query,
             answer=answer,
-            sources=docs,
-            latency_ms=round(latency_ms, 2),
+            retrieved_documents=retrieved,
+            query=request.query,
         )
 
 

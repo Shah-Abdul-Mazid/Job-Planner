@@ -1,19 +1,20 @@
-from pydantic import BaseModel
-from typing import List
+from __future__ import annotations
+from typing import Optional
+from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
+    role: str = Field(..., pattern="^(user|assistant|system)$")
     content: str
 
 
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
-    stream: bool = False
+    messages: list[ChatMessage]
+    session_id: str = ""
 
 
 class ChatResponse(BaseModel):
-    message: ChatMessage
-    model: str
-    tokens_used: int
-    latency_ms: float
+    response: str
+    session_id: str = "local"
+    model: str = "rule-based"
+    tokens_used: Optional[int] = None

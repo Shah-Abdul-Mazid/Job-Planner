@@ -1,10 +1,18 @@
-"""User ORM model — replace with SQLAlchemy / SQLModel Table."""
-from dataclasses import dataclass, field
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship
+from app.core.database import Base
 
+class User(Base):
+    __tablename__ = "users"
 
-@dataclass
-class User:
-    name: str
-    email: str
-    hashed_password: str
-    id: int = field(default=0)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    items = relationship("Item", back_populates="user", cascade="all, delete-orphan")
