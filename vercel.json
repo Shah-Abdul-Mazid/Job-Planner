@@ -4,7 +4,7 @@
     "backend": {
       "root": "Backend",
       "framework": "fastapi",
-      "entrypoint": "main:app"
+      "entrypoint": "app/main.py"
     },
     "frontend": {
       "root": "Frontend",
@@ -15,49 +15,49 @@
     {
       "source": "/api/(.*)",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/api",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/docs(.*)",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/redoc(.*)",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/openapi.json(.*)",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/health",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/version",
       "destination": {
-        "service": "Backend"
+        "service": "backend"
       }
     },
     {
       "source": "/(.*)",
       "destination": {
-        "service": "Frontend"
+        "service": "frontend"
       }
     }
   ]
