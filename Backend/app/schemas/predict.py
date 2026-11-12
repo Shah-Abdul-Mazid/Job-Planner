@@ -1,18 +1,19 @@
-from __future__ import annotations
-from typing import Any, Optional
 from pydantic import BaseModel
 
 
-class PredictRequest(BaseModel):
+class PredictionRequest(BaseModel):
     text: str
 
 
-class PredictResponse(BaseModel):
+class PredictionResponse(BaseModel):
     label: str
-    label_human: str
     confidence: float
-    confidence_tier: str          # "high" | "medium" | "low"
-    action: str
-    extracted: dict[str, Any] = {}
+    score: float
     latency_ms: float
-    model_device: str = "cpu"
+
+
+class HealthResponse(BaseModel):
+    status: str
+    ai_status: str
+    ml_model_loaded: bool
+    device: str

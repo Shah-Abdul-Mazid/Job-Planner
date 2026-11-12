@@ -1,30 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.schemas.user import UserCreate, UserLogin, UserResponse
-from app.services.user_service import UserService
+from fastapi import APIRouter, HTTPException, status
+from app.schemas.user import UserCreate, UserResponse
+from app.services.user_service import user_service
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get("", response_model=list[UserResponse], summary="List all users")
-def list_users(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    svc = UserService(db)
-    return svc.list_users(skip=skip, limit=limit)
+@router.get("/", response_model=list[UserResponse])
+async def read_users():
+    return user_service.list_users()
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED, summary="Register a new user")
-def register_user(payload: UserCreate, db: Session = Depends(get_db)):
-    svc = UserService(db)
-    return svc.register(payload)
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(user_in: UserCreate):
+    try:
+        return user_service.create_user(user_in)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/login", summary="Authenticate and get JWT token")
-def login(payload: UserLogin, db: Session = Depends(get_db)):
-    svc = UserService(db)
-    result = svc.authenticate(payload)
-    return {
-        "access_token": result["access_token"],
-        "token_type": "bearer",
-        "user": UserResponse.model_validate(result["user"]),
-    }
+@router.get("/{user_id}", response_model=UserResponse)
+async def read_user(user_id: int):
+    user = user_service.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
