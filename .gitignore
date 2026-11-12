@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+Backend/venv/
+*.db
+*.sqlite3
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / React
+node_modules/
+Frontend/node_modules/
+Frontend/dist/
+.npm
+*.local
+
+# Environment & IDE
+.env
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+[Dd]esktop.ini

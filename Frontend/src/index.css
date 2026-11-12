@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: #0d0c1d;
+    --bg-surface: #13111f;
+    --bg-card: #1a1826;
+    --bg-card-hover: #201d30;
+    --bg-sidebar: #110f1e;
+    --accent: #7c3aed;
+    --accent-light: #8b5cf6;
+    --accent-dim: rgba(124, 58, 237, 0.15);
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(124, 58, 237, 0.4);
+    --text-primary: #f1f0f7;
+    --text-secondary: #9492a8;
+    --text-muted: #5c5a72;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2d2b42; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #3d3b55; }
+
+/* ── Utility classes (dark theme) ──────────────────────── */
+@layer components {
+  .card {
+    @apply rounded-2xl border;
+    background: var(--bg-card);
+    border-color: var(--border);
+  }
+  .card-hover {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  .card-hover:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.12);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all;
+    background: var(--accent);
+  }
+  .btn-primary:hover {
+    background: var(--accent-light);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+    background: var(--accent-dim);
+  }
+
+  .input-dark {
+    @apply w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-all;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .input-dark::placeholder { color: var(--text-muted); }
+  .input-dark:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  }
+
+  .label-sm {
+    @apply text-[10px] font-bold tracking-widest uppercase;
+    color: var(--text-muted);
+  }
+
+  .stat-num {
+    @apply text-3xl font-bold tracking-tight;
+    color: var(--text-primary);
+  }
+
+  .badge-purple {
+    @apply text-[11px] font-bold px-2.5 py-0.5 rounded-full;
+    background: rgba(124, 58, 237, 0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+  }
+  .badge-green {
+    @apply text-[11px] font-bold px-2.5 py-0.5 rounded-full;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+  .badge-amber {
+    @apply text-[11px] font-bold px-2.5 py-0.5 rounded-full;
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+  .badge-red {
+    @apply text-[11px] font-bold px-2.5 py-0.5 rounded-full;
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+  .badge-blue {
+    @apply text-[11px] font-bold px-2.5 py-0.5 rounded-full;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  }
+}
+
+/* ── Recharts dark overrides ────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #1a1826 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  color: #f1f0f7 !important;
+  font-size: 12px !important;
+}
+.recharts-cartesian-axis-tick-value { fill: #5c5a72 !important; }
+.recharts-cartesian-grid line { stroke: rgba(255,255,255,0.05) !important; }
+
+/* ── Kanban column scrollbar ────────────────────────────── */
+.kanban-col { scrollbar-width: thin; scrollbar-color: #2d2b42 transparent; }
+
+/* ── Smooth page transitions ───────────────────────────── */
+.page-enter { animation: fadeUp 0.2s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Pulse dot ──────────────────────────────────────────── */
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #10b981;
+  animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
