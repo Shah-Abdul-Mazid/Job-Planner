@@ -10,8 +10,8 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-# Ensure Backend directory is on sys.path
-BASE_DIR = Path(__file__).resolve().parent
+# Ensure Backend/ (parent of app/) is on sys.path so `app.*` imports work
+BASE_DIR = Path(__file__).resolve().parent.parent  # Backend/app/../ = Backend/
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
