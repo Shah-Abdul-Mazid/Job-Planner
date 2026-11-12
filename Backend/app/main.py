@@ -62,6 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print(f"🛑 {settings.PROJECT_NAME} shutting down.")
 
 
+# On serverless (Vercel), disable lifespan to avoid container startup timeouts
+app_lifespan = None if os.getenv("VERCEL") else lifespan
+
 # ── App factory ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -73,7 +76,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan,
+    lifespan=app_lifespan,
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -142,4 +145,4 @@ if __name__ == "__main__":
     import uvicorn
 
     # Same port as Node for zero-change frontend compatibility
-    uvicorn.run("app.main:app", host="0.0.0.0", port=3001, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
