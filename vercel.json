@@ -1,53 +1,57 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "builds": [
-    {
-      "src": "Backend/api/index.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb"
-      }
+  "services": {
+    "api": {
+      "root": "Backend/api",
+      "framework": "fastapi"
     },
-    {
-      "src": "Frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+    "frontend": {
+      "root": "Frontend",
+      "framework": "vite"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "Backend/api/index.py"
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "src": "/docs(.*)",
-      "dest": "Backend/api/index.py"
+      "source": "/docs(.*)",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "src": "/redoc(.*)",
-      "dest": "Backend/api/index.py"
+      "source": "/redoc(.*)",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "src": "/openapi.json(.*)",
-      "dest": "Backend/api/index.py"
+      "source": "/openapi.json(.*)",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "src": "/health",
-      "dest": "Backend/api/index.py"
+      "source": "/health",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "src": "/version",
-      "dest": "Backend/api/index.py"
+      "source": "/version",
+      "destination": {
+        "service": "api"
+      }
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
     }
   ]
 }
