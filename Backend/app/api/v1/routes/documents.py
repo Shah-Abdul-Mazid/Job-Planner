@@ -22,8 +22,19 @@ from app.models.item import DocumentModel, Item
 
 router = APIRouter()
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+if os.environ.get("VERCEL"):
+    UPLOAD_DIR = "/tmp/uploads"
+else:
+    UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "uploads")
+
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    UPLOAD_DIR = "/tmp/uploads"
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    except Exception:
+        pass
 
 
 class DocumentItemResponse(BaseModel):

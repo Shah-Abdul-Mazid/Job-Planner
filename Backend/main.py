@@ -25,25 +25,29 @@ from app.api.v1.router import api_router
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # ① Create tables if using relational database
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"Database init notice: {e}")
-
-    # ② Seed initial data if DB is empty
-    try:
-        from app.core.database import SessionLocal
-        db = SessionLocal()
+    mongodb_uri = os.getenv("MONGODB_URI") or getattr(settings, "MONGODB_URI", "")
+    if not mongodb_uri:
+        # ① Create tables if using local SQLite
         try:
-            from app.models.item import Item
-            if db.query(Item).count() == 0:
-                from app.seed_data import seed_database
-                seed_database(db)
-        finally:
-            db.close()
-    except Exception as e:
-        print(f"Seed notice: {e}")
+            Base.metadata.create_all(bind=engine)
+        except Exception as e:
+            print(f"Database init notice: {e}")
+
+        # ② Seed initial data if DB is empty
+        try:
+            from app.core.database import SessionLocal
+            db = SessionLocal()
+            try:
+                from app.models.item import Item
+                if db.query(Item).count() == 0:
+                    from app.seed_data import seed_database
+                    seed_database(db)
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Seed notice: {e}")
+    else:
+        print(" Connected with MongoDB Atlas configuration.")
 
     print(f"✅ {settings.PROJECT_NAME} started — docs at http://127.0.0.1:8000/docs")
     yield

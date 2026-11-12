@@ -13,8 +13,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database (MongoDB Atlas primary, SQLite local fallback)
-    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
-    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'careertrack.db'}")
+    MONGODB_URI: str = os.getenv(
+        "MONGODB_URI",
+        "mongodb+srv://ezanshah58_db_user:tcB7vRP4jsbcgyT8@jobappilcationdatabasec.zc4vzys.mongodb.net/?retryWrites=true&w=majority"
+    )
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "sqlite:////tmp/careertrack.db" if os.environ.get("VERCEL") else f"sqlite:///{BASE_DIR / 'careertrack.db'}"
+    )
     TIMEZONE: str = "Asia/Dhaka"
 
     # AI / GenAI
