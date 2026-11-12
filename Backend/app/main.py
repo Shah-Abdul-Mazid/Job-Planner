@@ -138,17 +138,8 @@ async def version():
     }
 
 
-# Mangum handler for serverless compatibility
-try:
-    from mangum import Mangum
-
-    handler = Mangum(app, lifespan="off")
-except Exception:
-    handler = app
-
-
 if __name__ == "__main__":
     import uvicorn
 
     # Same port as Node for zero-change frontend compatibility
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=3001, reload=True)
