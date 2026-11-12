@@ -14,9 +14,7 @@ class Settings(BaseSettings):
 
     # Database (MongoDB Atlas primary, SQLite local fallback)
     MONGODB_URI: str = os.getenv(
-        "MONGODB_URI",
-        "mongodb+srv://ezanshah58_db_user:tcB7vRP4jsbcgyT8@jobappilcationdatabasec.zc4vzys.mongodb.net/?retryWrites=true&w=majority"
-    )
+        "MONGODB_URI"    )
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
         "sqlite:////tmp/careertrack.db" if os.environ.get("VERCEL") else f"sqlite:///{BASE_DIR / 'careertrack.db'}"
