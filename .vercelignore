@@ -1,0 +1,12 @@
+# Vercel – skip heavy folders from upload
+Backend/venv
+Backend/.venv
+Backend/__pycache__
+Backend/app/__pycache__
+Backend/careertrack.db
+Frontend/node_modules
+Frontend/dist
+.git
+*.pyc
+*.pyo
+*.pyd
