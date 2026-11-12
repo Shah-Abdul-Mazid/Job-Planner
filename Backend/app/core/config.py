@@ -4,20 +4,24 @@ from pydantic_settings import BaseSettings
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+
 class Settings(BaseSettings):
     # Common
     PROJECT_NAME: str = "CareerTrack BD"
     DEBUG: bool = True
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "careertrack_bd_super_secret_jwt_key_2026")
+    SECRET_KEY: str = os.getenv(
+        "SECRET_KEY", "careertrack_bd_super_secret_jwt_key_2026"
+    )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database (MongoDB Atlas primary, SQLite local fallback)
-    MONGODB_URI: str = os.getenv(
-        "MONGODB_URI"    )
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "sqlite:////tmp/careertrack.db" if os.environ.get("VERCEL") else f"sqlite:///{BASE_DIR / 'careertrack.db'}"
+        "sqlite:////tmp/careertrack.db"
+        if os.environ.get("VERCEL")
+        else f"sqlite:///{BASE_DIR / 'careertrack.db'}",
     )
     TIMEZONE: str = "Asia/Dhaka"
 
@@ -42,5 +46,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "ignore"
+
 
 settings = Settings()

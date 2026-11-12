@@ -4,6 +4,7 @@ Single main file for Backend service (used by Vercel entrypoint 'main:app' and l
 """
 
 from __future__ import annotations
+import os
 import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -22,34 +23,36 @@ from app.core.database import engine, Base
 from app.api.v1.router import api_router
 
 
-# ── Lifespan ──────────────────────────────────────────────────────────────────
+# ── Lifespan (Defensive for serverless) ───────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    mongodb_uri = os.getenv("MONGODB_URI") or getattr(settings, "MONGODB_URI", "")
-    if not mongodb_uri:
-        # ① Create tables if using local SQLite
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception as e:
-            print(f"Database init notice: {e}")
-
-        # ② Seed initial data if DB is empty
-        try:
-            from app.core.database import SessionLocal
-            db = SessionLocal()
+    try:
+        mongodb_uri = os.getenv("MONGODB_URI") or getattr(settings, "MONGODB_URI", "")
+        if not mongodb_uri:
+            # Create SQLite tables only if not in read-only environment
             try:
-                from app.models.item import Item
-                if db.query(Item).count() == 0:
-                    from app.seed_data import seed_database
-                    seed_database(db)
-            finally:
-                db.close()
-        except Exception as e:
-            print(f"Seed notice: {e}")
-    else:
-        print(" Connected with MongoDB Atlas configuration.")
+                Base.metadata.create_all(bind=engine)
+            except Exception as e:
+                print(f"[Lifespan] SQLite table creation skipped: {e}")
 
-    print(f"✅ {settings.PROJECT_NAME} started — docs at http://127.0.0.1:8000/docs")
+            try:
+                from app.core.database import SessionLocal
+                db = SessionLocal()
+                try:
+                    from app.models.item import Item
+                    if db.query(Item).count() == 0:
+                        from app.seed_data import seed_database
+                        seed_database(db)
+                finally:
+                    db.close()
+            except Exception as e:
+                print(f"[Lifespan] SQLite seed skipped: {e}")
+        else:
+            print("[Lifespan] Connected with MongoDB Atlas configuration.")
+    except Exception as e:
+        print(f"[Lifespan] Startup notice: {e}")
+
+    print(f"✅ {settings.PROJECT_NAME} ready — docs at /docs")
     yield
     print(f"🛑 {settings.PROJECT_NAME} shutting down.")
 
@@ -94,6 +97,25 @@ async def root():
     }
 
 
+@app.get("/api", tags=["Root"])
+async def api_root():
+    return {
+        "service": settings.PROJECT_NAME,
+        "version": "1.0.0",
+        "api": "/api/v1",
+        "status": "running",
+    }
+
+
+@app.get("/api/v1", tags=["Root"])
+async def api_v1_root():
+    return {
+        "service": settings.PROJECT_NAME,
+        "version": "1.0.0",
+        "status": "running",
+    }
+
+
 @app.get("/health", tags=["Root"])
 async def health():
     return {
@@ -109,6 +131,14 @@ async def version():
         "service": settings.PROJECT_NAME,
         "version": "1.0.0",
     }
+
+
+# Mangum handler for serverless compatibility
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except Exception:
+    pass
 
 
 if __name__ == "__main__":
