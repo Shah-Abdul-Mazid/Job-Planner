@@ -10,10 +10,12 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-# Ensure Backend/ (parent of app/) is on sys.path so `app.*` imports work
-BASE_DIR = Path(__file__).resolve().parent.parent  # Backend/app/../ = Backend/
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
+# Ensure both Backend/ and Backend/app/ are on sys.path for universal import compatibility
+CURRENT_DIR = Path(__file__).resolve().parent
+PARENT_DIR = CURRENT_DIR.parent
+for p in [str(PARENT_DIR), str(CURRENT_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,16 +138,8 @@ async def version():
     }
 
 
-# Mangum handler for serverless compatibility
-try:
-    from mangum import Mangum
-
-    handler = Mangum(app)
-except Exception:
-    pass
-
-
 if __name__ == "__main__":
     import uvicorn
+
     # Same port as Node for zero-change frontend compatibility
-    uvicorn.run("app.main:app", host="0.0.0.0", port=3001, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
