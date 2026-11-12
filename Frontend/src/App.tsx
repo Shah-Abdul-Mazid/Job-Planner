@@ -8,6 +8,8 @@ import { CompaniesPage } from './pages/CompaniesPage';
 import { InterviewsPage } from './pages/InterviewsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { DocumentsPage } from './pages/DocumentsPage';
+import { AdmitCardPage } from './pages/AdmitCardPage';
+import { SeatPlanPage } from './pages/SeatPlanPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { NotificationsDrawer } from './components/layout/NotificationsDrawer';
 import { ApplicationModal } from './components/applications/ApplicationModal';
@@ -38,9 +40,7 @@ export function App() {
   const handleGlobalCreate = async (payload: ApplicationCreatePayload) => {
     await api.createApplication(payload);
     setIsGlobalCreateOpen(false);
-    // If user is already on applications tab, force refresh by switching or letting it refetch
     setCurrentTab('applications');
-    // Dispatch a custom event so Applications page re-fetches immediately
     window.dispatchEvent(new CustomEvent('application-created'));
   };
 
@@ -51,6 +51,8 @@ export function App() {
     companies: 'Companies & Organizations',
     interviews: 'Interviews & Examinations',
     calendar: 'Examination Calendar',
+    'admit-upload': 'Admit Card PDF Upload & Extraction',
+    'seatplan-upload': 'Seat Plan & Exam Schedule PDF Upload',
     documents: 'Document Intelligence',
     assistant: 'AI Recruitment Assistant',
     notifications: 'Notifications & Alerts',
@@ -104,6 +106,8 @@ export function App() {
             {currentTab === 'companies' && <CompaniesPage />}
             {currentTab === 'interviews' && <InterviewsPage />}
             {currentTab === 'calendar' && <CalendarPage />}
+            {currentTab === 'admit-upload' && <AdmitCardPage />}
+            {currentTab === 'seatplan-upload' && <SeatPlanPage />}
             {currentTab === 'documents' && <DocumentsPage />}
             {currentTab === 'assistant' && <AssistantPage />}
           </div>

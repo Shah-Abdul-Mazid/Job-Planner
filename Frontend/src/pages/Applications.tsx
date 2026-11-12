@@ -156,9 +156,14 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
       {/* ── Upcoming Confirmed Exam Callout Banner ── */}
       {(() => {
         const examApp = applications.find(
-          a => a.status === 'Exam Scheduled' || (a.examinations && a.examinations.length > 0)
+          a => a.status === 'Exam Scheduled' || (a.examinations && a.examinations.length > 0) || a.job_id === '26101'
         );
         if (!examApp) return null;
+        const rollDisplay = examApp.roll_number && examApp.roll_number !== 'Awaiting' ? examApp.roll_number : '116683';
+        const trackingDisplay = examApp.tracking_id || '26101-2052062-208657';
+        const centerDisplay = examApp.examinations?.[0]?.center_name || 'Shamsul Hoque Khan School & College (School Campus), Matuail, Jatrabari, Dhaka';
+        const examTimeDisplay = examApp.examinations?.[0]?.start_time ? `${examApp.examinations[0].start_time} – ${examApp.examinations[0].end_time}` : '03:00 PM – 04:00 PM';
+
         return (
           <div className="p-4 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-transparent flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
             <div className="flex items-start gap-3">
@@ -168,27 +173,36 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 uppercase tracking-wider">
-                    TOMORROW (NOV 13)
+                    EXAM CONFIRMED
                   </span>
                   <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Confirmed MCQ Exam
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Friday, Nov 13, 2026
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-white mt-1">
                   {examApp.organization_name} — {examApp.post_name} (Job #{examApp.job_id})
                 </h3>
-                <p className="text-xs text-zinc-300 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span>🕒 Friday, Nov 13, 2026 · 03:00 PM – 04:00 PM</span>
-                  <span>📍 Shamsul Hoque Khan School &amp; College, Jatrabari</span>
-                  <span className="font-mono text-purple-300">Roll: {examApp.roll_number || '116683'}</span>
-                </p>
+                <div className="text-xs text-zinc-300 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="text-amber-300 font-semibold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" /> {examTimeDisplay} (Report by 02:00 PM)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-rose-400" /> Centre #3: {centerDisplay}
+                  </span>
+                  <span className="font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    Roll: {rollDisplay}
+                  </span>
+                  <span className="font-mono text-zinc-400 text-[11px]">
+                    Track: {trackingDisplay}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 self-end md:self-center flex-shrink-0">
               <button
                 type="button"
                 onClick={() => {
-                  setSeatPlanRoll(examApp.roll_number ? parseInt(examApp.roll_number) : 116683);
+                  setSeatPlanRoll(parseInt(rollDisplay, 10) || 116683);
                   setIsSeatPlanOpen(true);
                 }}
                 className="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors flex items-center gap-1.5 shadow-sm"
@@ -358,73 +372,104 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
                         {app.grade && <span className="ml-1.5 text-[10px] font-normal" style={{ color: 'var(--text-muted)' }}>({app.grade})</span>}
                       </p>
 
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="badge-purple">#{app.job_id}</span>
-                        {app.admit_card_available && <span className="badge-green">✓ Admit Ready</span>}
-                        {app.roll_number && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded"
-                            style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-                            Roll: {app.roll_number}
-                          </span>
-                        )}
-                      </div>
+                      {/* Roll & Tracking Badges */}
+                      {(() => {
+                        const rollVal = app.roll_number && app.roll_number !== 'Awaiting' ? app.roll_number : (app.job_id === '26101' ? '116683' : app.roll_number);
+                        const trackVal = app.tracking_id || (app.job_id === '26101' ? '26101-2052062-208657' : null);
+                        const isExamActive = app.status === 'Exam Scheduled' || (app.examinations && app.examinations.length > 0) || app.job_id === '26101';
+                        const examCenter = app.examinations?.[0]?.center_name || (app.job_id === '26101' ? 'Shamsul Hoque Khan School & College (School Campus)' : null);
+                        const examArea = app.examinations?.[0]?.center_address || (app.job_id === '26101' ? 'Matuail, Demra Road, Jatrabari, Dhaka (Centre #3)' : null);
+                        const examDate = app.examinations?.[0]?.exam_date || (app.job_id === '26101' ? 'Friday, Nov 13, 2026' : null);
+                        const examTime = app.examinations?.[0]?.start_time ? `${app.examinations[0].start_time} – ${app.examinations[0].end_time}` : (app.job_id === '26101' ? '03:00 PM – 04:00 PM' : null);
+                        const reportTime = app.examinations?.[0]?.reporting_time || (app.job_id === '26101' ? '02:00 PM' : null);
 
-                      {/* Scheduled Exam Callout Banner — rendered if the app has confirmed exam data */}
-                      {app.examinations && app.examinations.length > 0 && (
-                        <div className="p-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-1.5"
-                          onClick={(e) => { e.stopPropagation(); setSelectedApp(app); setIsDetailOpen(true); }}>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-amber-400" />
-                              {app.examinations[0].exam_type || 'MCQ'} Exam
-                            </span>
-                            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-300 border border-amber-500/40">
-                              {app.examinations[0].schedule_status === 'confirmed' ? 'Confirmed' : 'Scheduled'}
-                            </span>
-                          </div>
-                          
-                          <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                            <span>
-                              {app.examinations[0].exam_date ? new Date(app.examinations[0].exam_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Date TBA'}
-                            </span>
-                            {app.examinations[0].start_time && (
-                              <>
-                                <span className="text-zinc-500">·</span>
-                                <span className="text-amber-300">
-                                  {app.examinations[0].start_time}{app.examinations[0].end_time ? ` – ${app.examinations[0].end_time}` : ''}
+                        return (
+                          <>
+                            {/* Badges */}
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                              <span className="badge-purple font-mono font-bold">#{app.job_id}</span>
+                              {app.admit_card_available && <span className="badge-green font-semibold">✓ Admit Ready</span>}
+                              {rollVal && (
+                                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                  Roll: {rollVal}
                                 </span>
-                              </>
+                              )}
+                              {trackVal && (
+                                <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded truncate max-w-[170px]" title={`Tracking: ${trackVal}`}>
+                                  ID: {trackVal}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Scheduled Exam Callout Card — renders whenever exam is active */}
+                            {isExamActive && (
+                              <div
+                                className="p-3 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-purple-500/10 space-y-2 shadow-md hover:border-amber-400 transition-all"
+                                onClick={(e) => { e.stopPropagation(); setSelectedApp(app); setIsDetailOpen(true); }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-amber-400" />
+                                    100 Marks MCQ Exam
+                                  </span>
+                                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                    Confirmed
+                                  </span>
+                                </div>
+
+                                {/* Exam Date & Time */}
+                                <div className="space-y-1 text-xs">
+                                  <p className="font-bold text-white flex items-center gap-1.5">
+                                    <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                    <span>{examDate}</span>
+                                    {examTime && <span className="text-amber-300 font-mono">· {examTime}</span>}
+                                  </p>
+
+                                  {reportTime && (
+                                    <p className="text-[11px] text-zinc-300 flex items-center gap-1.5 pl-5">
+                                      <span>Reporting Time: <strong className="text-white font-mono">{reportTime}</strong> (Gate closes before test)</span>
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Exam Venue / Center */}
+                                {examCenter && (
+                                  <div className="pt-1.5 border-t border-amber-500/20">
+                                    <p className="text-[11px] font-bold text-white flex items-start gap-1 leading-snug">
+                                      <MapPin className="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                                      <span>{examCenter}</span>
+                                    </p>
+                                    {examArea && (
+                                      <p className="text-[10px] text-zinc-400 pl-4.5 mt-0.5">
+                                        {examArea}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Bottom info row */}
+                                <div className="pt-2 flex items-center justify-between border-t border-amber-500/20">
+                                  <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
+                                    Roll: {rollVal}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSeatPlanRoll(parseInt(String(rollVal || '116683'), 10) || 116683);
+                                      setIsSeatPlanOpen(true);
+                                    }}
+                                    className="text-[10px] font-bold text-amber-300 hover:text-white px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 transition-all flex items-center gap-1"
+                                  >
+                                    <FileSpreadsheet className="w-3 h-3" />
+                                    Seat Plan (Centre #3)
+                                  </button>
+                                </div>
+                              </div>
                             )}
-                          </p>
-
-                          {app.examinations[0].center_name && (
-                            <p className="text-[11px] text-zinc-300 truncate flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                              <span>{app.examinations[0].center_name}</span>
-                            </p>
-                          )}
-
-                          <div className="pt-1 flex items-center justify-between border-t border-amber-500/20">
-                            <span className="text-[10px] font-mono font-semibold text-emerald-400">
-                              Roll: {app.roll_number || 'Awaiting'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSeatPlanRoll(app.roll_number ? parseInt(app.roll_number) : 116683);
-                                setIsSeatPlanOpen(true);
-                              }}
-                              className="text-[10px] font-bold text-amber-300 hover:text-white px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 transition-colors flex items-center gap-1"
-                            >
-                              <FileSpreadsheet className="w-3 h-3" />
-                              Seat Plan
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                          </>
+                        );
+                      })()}
 
                       {/* Footer */}
                       <div className="flex items-center justify-between pt-2 gap-2"
@@ -474,68 +519,93 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
               <thead>
                 <tr className="text-[11px] font-bold uppercase tracking-wider"
                   style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                  {['Organization & Post', 'Job ID', 'Roll & Tracking', 'Status', 'Admit Card', 'Timeline', 'Actions'].map(h => (
+                  {['Organization & Post', 'Job ID', 'Roll & Tracking', 'Exam Venue & Date', 'Status', 'Admit Card', 'Timeline', 'Actions'].map(h => (
                     <th key={h} className={`py-3.5 px-4 ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {applications.map((app) => (
-                  <tr key={app.id}
-                    className="group cursor-pointer transition-colors"
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    onClick={() => { setSelectedApp(app); setIsDetailOpen(true); }}>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white group-hover:text-purple-300 transition-colors">
-                        {app.post_name}
-                      </div>
-                      <div className="text-xs mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                        <Building className="w-3 h-3" />
-                        {app.organization_name}
-                        {app.grade && <span className="text-[10px] px-1.5 py-0.5 rounded"
-                          style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>{app.grade}</span>}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold" style={{ color: '#a78bfa' }}>#{app.job_id}</td>
-                    <td className="py-3.5 px-4 font-mono text-xs">
-                      <div className="font-bold text-white">{app.roll_number || 'Pending'}</div>
-                      <div className="truncate max-w-[130px]" style={{ color: 'var(--text-muted)' }}>
-                        {app.tracking_id || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4"><StatusBadge status={app.status} /></td>
-                    <td className="py-3.5 px-4">
-                      {app.admit_card_available
-                        ? <span className="badge-green flex items-center gap-1 w-fit"><FileCheck2 className="w-3 h-3" />Available</span>
-                        : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Pending</span>
-                      }
-                    </td>
-                    <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <div>Applied: {app.application_date || 'N/A'}</div>
-                      {app.deadline && <div>Due: {app.deadline}</div>}
-                    </td>
-                    <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        {[
-                          { icon: Eye, onClick: () => { setSelectedApp(app); setIsDetailOpen(true); }, title: 'View' },
-                          { icon: Edit2, onClick: () => { setSelectedApp(app); setIsEditOpen(true); }, title: 'Edit' },
-                          { icon: Trash2, onClick: () => setDeleteConfirmApp(app), title: 'Delete' },
-                        ].map((btn) => {
-                          const BIcon = btn.icon;
-                          return (
-                            <button key={btn.title} onClick={btn.onClick} title={btn.title}
-                              className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
-                              style={{ color: 'var(--text-muted)' }}>
-                              <BIcon className="w-4 h-4" />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {applications.map((app) => {
+                  const rollVal = app.roll_number && app.roll_number !== 'Awaiting' ? app.roll_number : (app.job_id === '26101' ? '116683' : app.roll_number);
+                  const trackVal = app.tracking_id || (app.job_id === '26101' ? '26101-2052062-208657' : null);
+                  const centerName = app.examinations?.[0]?.center_name || (app.job_id === '26101' ? 'Shamsul Hoque Khan School & College' : null);
+                  const examDate = app.examinations?.[0]?.exam_date || (app.job_id === '26101' ? '13 Nov 2026' : null);
+
+                  return (
+                    <tr key={app.id}
+                      className="group cursor-pointer transition-colors"
+                      style={{ borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      onClick={() => { setSelectedApp(app); setIsDetailOpen(true); }}>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                          {app.post_name}
+                        </div>
+                        <div className="text-xs mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                          <Building className="w-3 h-3" />
+                          {app.organization_name}
+                          {app.grade && <span className="text-[10px] px-1.5 py-0.5 rounded"
+                            style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>{app.grade}</span>}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold" style={{ color: '#a78bfa' }}>#{app.job_id}</td>
+                      <td className="py-3.5 px-4 font-mono text-xs">
+                        <div className="font-bold text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded w-fit border border-emerald-500/20">
+                          {rollVal ? `Roll: ${rollVal}` : 'Pending'}
+                        </div>
+                        <div className="truncate max-w-[140px] mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                          {trackVal || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs">
+                        {centerName ? (
+                          <div>
+                            <div className="font-bold text-white flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                              <span className="truncate max-w-[180px]">{centerName}</span>
+                            </div>
+                            <div className="text-[11px] text-amber-300 font-mono mt-0.5 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {examDate} (03:00 PM)
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500 text-xs">Seat Plan Pending</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4"><StatusBadge status={app.status} /></td>
+                      <td className="py-3.5 px-4">
+                        {app.admit_card_available
+                          ? <span className="badge-green flex items-center gap-1 w-fit"><FileCheck2 className="w-3 h-3" />Available</span>
+                          : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Pending</span>
+                        }
+                      </td>
+                      <td className="py-3.5 px-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <div>Applied: {app.application_date || 'N/A'}</div>
+                        {app.deadline && <div>Due: {app.deadline}</div>}
+                      </td>
+                      <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {[
+                            { icon: Eye, onClick: () => { setSelectedApp(app); setIsDetailOpen(true); }, title: 'View' },
+                            { icon: Edit2, onClick: () => { setSelectedApp(app); setIsEditOpen(true); }, title: 'Edit' },
+                            { icon: Trash2, onClick: () => setDeleteConfirmApp(app), title: 'Delete' },
+                          ].map((btn) => {
+                            const BIcon = btn.icon;
+                            return (
+                              <button key={btn.title} onClick={btn.onClick} title={btn.title}
+                                className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
+                                style={{ color: 'var(--text-muted)' }}>
+                                <BIcon className="w-4 h-4" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

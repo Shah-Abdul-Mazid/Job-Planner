@@ -2,38 +2,39 @@
 items.py — Job Application routes for CareerTrack BD.
 Maps to Frontend/src/services/api.ts API client.
 
-Route order matters: named routes MUST come before /{item_id}.
+Starts 100% clean (no seed data) so user can upload and test from scratch.
 """
 
 from __future__ import annotations
 import math
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 
 router = APIRouter()
 
-# ── In-memory store (Vercel is stateless — resets per cold-start) ─────────────
+# ── In-memory store — Starts completely CLEAN (no seed data) ─────────────────
 _applications: list[dict] = []
-_next_id = 1
+_next_id: int = 1
 
 
-def _now() -> str:
+def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _build(id: int, data: dict) -> dict:
+def _build_app(id: int, data: dict) -> dict:
     return {
         "id": id,
         "organization_name": data.get("organization_name", ""),
         "post_name": data.get("post_name", ""),
-        "job_id": data.get("job_id", ""),
-        "grade": data.get("grade"),
+        "job_id": str(data.get("job_id", "")),
+        "grade": data.get("grade") or "Grade-9",
         "tracking_id": data.get("tracking_id"),
         "roll_number": data.get("roll_number"),
-        "application_date": data.get("application_date"),
+        "applicant_name": data.get("applicant_name", "SHAH ABDUL MAZID"),
+        "application_date": data.get("application_date") or _utcnow()[:10],
         "deadline": data.get("deadline"),
         "status": data.get("status", "Applied"),
         "admit_card_available": bool(data.get("admit_card_available", False)),
@@ -41,26 +42,65 @@ def _build(id: int, data: dict) -> dict:
         "notes": data.get("notes"),
         "choices": data.get("choices", []),
         "examinations": data.get("examinations", []),
-        "created_at": _now(),
-        "updated_at": _now(),
+        "created_at": _utcnow(),
+        "updated_at": _utcnow(),
     }
 
 
+# ── 31 Centers from Bangladesh Bank BSCS Notice No. 357/2026 ─────────────────
+BB_357_CENTRES = [
+    {"centre_no": 1, "name": "Milestone College", "area": "Diabari, Turag-Dhaka", "roll_from": 100001, "roll_to": 108416, "total": 7200},
+    {"centre_no": 2, "name": "Banani Bidyaniketan School and College", "area": "Road 23/A, Block-B, Banani Model Town, Dhaka", "roll_from": 108417, "roll_to": 111827, "total": 3000},
+    {"centre_no": 3, "name": "Shamsul Hoque Khan School and College (School Campus)", "area": "Matuail, Demra, Jatrabari, Dhaka", "roll_from": 111828, "roll_to": 121329, "total": 8300},
+    {"centre_no": 4, "name": "Dr. Mahbubur Rahman Molla College", "area": "Matuail, Demra Road, Jatrabari, Dhaka", "roll_from": 121330, "roll_to": 131608, "total": 9000},
+    {"centre_no": 5, "name": "A. K. School & College (Main Campus)", "area": "Dania, Dhaka", "roll_from": 131609, "roll_to": 135226, "total": 3200},
+    {"centre_no": 6, "name": "A. K. School & College (New Campus)", "area": "Dania, Dhaka", "roll_from": 135227, "roll_to": 137300, "total": 1800},
+    {"centre_no": 7, "name": "Dania College", "area": "Dania, Jatrabari, Dhaka", "roll_from": 137301, "roll_to": 144132, "total": 6000},
+    {"centre_no": 8, "name": "Barnamala Adarsha High School and College", "area": "Dania, Jatrabari, Dhaka-1236", "roll_from": 144133, "roll_to": 148159, "total": 3500},
+    {"centre_no": 9, "name": "Ahmed Bawany Academy School & College", "area": "Armanitola, Babubazar, Dhaka", "roll_from": 148160, "roll_to": 152768, "total": 4000},
+    {"centre_no": 10, "name": "Fazlul Haque Mohila College", "area": "12, Akshay Das Lane, Sutrapur, Gendaria, Dhaka", "roll_from": 152770, "roll_to": 157365, "total": 4000},
+    {"centre_no": 11, "name": "Armanitola Government High School", "area": "Armanitola, Dhaka", "roll_from": 157366, "roll_to": 160449, "total": 2700},
+    {"centre_no": 12, "name": "Mirpur Bangla School and College (Boys Section)", "area": "Section 11, Mirpur, Dhaka", "roll_from": 160450, "roll_to": 164456, "total": 3500},
+    {"centre_no": 13, "name": "Mirpur Bangla School and College (Girls Section)", "area": "Section 6, Mirpur, Dhaka", "roll_from": 164457, "roll_to": 166402, "total": 1700},
+    {"centre_no": 14, "name": "Mirpur College", "area": "Section-2, Mirpur, Dhaka", "roll_from": 166403, "roll_to": 172044, "total": 5000},
+    {"centre_no": 15, "name": "Mirpur Girls Ideal College", "area": "Mirpur 10, Dhaka", "roll_from": 172045, "roll_to": 176017, "total": 3500},
+    {"centre_no": 16, "name": "Mirpur Girls Ideal Laboratory Institute", "area": "Mirpur 10, Dhaka", "roll_from": 176018, "roll_to": 180049, "total": 3500},
+    {"centre_no": 17, "name": "Kadamtala Purba Basabo School & College", "area": "28/3, Kadamtala, Basabo, Dhaka", "roll_from": 180051, "roll_to": 184589, "total": 4000},
+    {"centre_no": 18, "name": "Khilgaon Girls School & College", "area": "Khilgaon, Dhaka", "roll_from": 184590, "roll_to": 188027, "total": 3000},
+    {"centre_no": 19, "name": "Khilgaon Govt. High School", "area": "Khilgaon, Dhaka", "roll_from": 188028, "roll_to": 191465, "total": 3000},
+    {"centre_no": 20, "name": "Khilgaon Model College", "area": "721/1, Block-C, Khilgaon, Dhaka", "roll_from": 191466, "roll_to": 195476, "total": 3500},
+    {"centre_no": 21, "name": "Khilgaon School and College", "area": "711/C, Khilgaon, Dhaka", "roll_from": 195477, "roll_to": 199488, "total": 3500},
+    {"centre_no": 22, "name": "Model High School, Khilgaon", "area": "Khilgaon, Dhaka", "roll_from": 199489, "roll_to": 201792, "total": 2000},
+    {"centre_no": 23, "name": "Maghbazar Girls' High School", "area": "Siddheswari, Ramna, Dhaka", "roll_from": 201793, "roll_to": 205219, "total": 3000},
+    {"centre_no": 24, "name": "Mohammadpur Kendriya College", "area": "Nurjahan road, Mohammadpur, Dhaka", "roll_from": 205221, "roll_to": 208662, "total": 3000},
+    {"centre_no": 25, "name": "Lalmatia Girls' High School & College", "area": "9/15, Block - D , Lalmatia, Dhaka", "roll_from": 208663, "roll_to": 212673, "total": 3500},
+    {"centre_no": 26, "name": "Sher-E-Bangla Nagar Govt. Girls High School", "area": "Agargaon, Dhaka", "roll_from": 212674, "roll_to": 215417, "total": 2400},
+    {"centre_no": 27, "name": "Dhanmondi Govt. Boys High School", "area": "03 Sobhanbagh, Mirpur Road, Dhaka", "roll_from": 215418, "roll_to": 218832, "total": 3000},
+    {"centre_no": 28, "name": "Dhanmondi Government Girls High School", "area": "Dhanmondi R/A, Dhaka", "roll_from": 218833, "roll_to": 221673, "total": 2500},
+    {"centre_no": 29, "name": "Tejgaon College", "area": "16, Indira Road, Farmgate, Dhaka", "roll_from": 221675, "roll_to": 230825, "total": 8000},
+    {"centre_no": 30, "name": "Tejgaon Govt. High School", "area": "42, East Tejturi bajar, Tejgaon, Dhaka", "roll_from": 230826, "roll_to": 234245, "total": 3000},
+    {"centre_no": 31, "name": "Azimpur Govt. Girls School & College", "area": "Azimpur, Dhaka", "roll_from": 234246, "roll_to": 237923, "total": 3229},
+]
+
+
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
+
 class ApplicationCreate(BaseModel):
     organization_name: str
     post_name: str
     job_id: str
-    grade: Optional[str] = None
+    grade: Optional[str] = "Grade-9"
     tracking_id: Optional[str] = None
     roll_number: Optional[str] = None
+    applicant_name: Optional[str] = "SHAH ABDUL MAZID"
     application_date: Optional[str] = None
     deadline: Optional[str] = None
     status: Optional[str] = "Applied"
     admit_card_available: Optional[bool] = False
     admit_card_url: Optional[str] = None
     notes: Optional[str] = None
-    choices: Optional[list[Any]] = []
+    choices: Optional[List[Any]] = []
+    examinations: Optional[List[Any]] = []
 
 
 class ApplicationUpdate(BaseModel):
@@ -70,96 +110,108 @@ class ApplicationUpdate(BaseModel):
     grade: Optional[str] = None
     tracking_id: Optional[str] = None
     roll_number: Optional[str] = None
+    applicant_name: Optional[str] = None
     application_date: Optional[str] = None
     deadline: Optional[str] = None
     status: Optional[str] = None
     admit_card_available: Optional[bool] = None
     admit_card_url: Optional[str] = None
     notes: Optional[str] = None
-    choices: Optional[list[Any]] = None
+    choices: Optional[List[Any]] = None
+    examinations: Optional[List[Any]] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Named sub-routes — ALL must be declared BEFORE /{item_id}
+# Named sub-routes — declared BEFORE /{item_id}
 # ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/clean", summary="Clean all applications and reset database to empty")
+async def clean_database():
+    """Wipes all applications so user can start from a completely clean slate."""
+    global _applications, _next_id
+    _applications = []
+    _next_id = 1
+    return {"status": "ok", "message": "Database cleaned successfully. 0 applications remaining."}
+
 
 @router.get("/stats", summary="Dashboard statistics")
 async def get_stats():
-    """
-    Returns dashboard statistics used by App.tsx health-check and Dashboard page.
-    Matches the DashboardStats TypeScript interface:
-      total_applications, submitted_count, upcoming_exams_count, shortlisted_count,
-      rejected_count, pending_admit_cards, upcoming_deadlines_count,
-      status_distribution, recent_activities
-    """
     apps = _applications
-    total = len(apps)
-    submitted   = sum(1 for a in apps if a["status"] in ("Submitted", "Applied", "Draft"))
-    shortlisted = sum(1 for a in apps if a["status"] == "Shortlisted")
-    rejected    = sum(1 for a in apps if a["status"] == "Rejected")
+    total         = len(apps)
+    submitted     = sum(1 for a in apps if a["status"] in ("Submitted", "Applied", "Draft"))
+    shortlisted   = sum(1 for a in apps if a["status"] == "Shortlisted")
+    rejected      = sum(1 for a in apps if a["status"] == "Rejected")
     pending_admit = sum(
         1 for a in apps
-        if not a["admit_card_available"] and a["status"] not in ("Draft", "Rejected")
+        if not a.get("admit_card_available") and a["status"] not in ("Draft", "Rejected")
     )
     exam_scheduled = sum(
         1 for a in apps
         if a["status"] in ("Exam Scheduled", "Written Examination", "Admit Card Available")
     )
 
-    # Count per status for chart
     status_counts: dict[str, int] = {}
     for a in apps:
         s = a["status"]
         status_counts[s] = status_counts.get(s, 0) + 1
     status_distribution = [{"status": s, "count": c} for s, c in status_counts.items()]
 
-    # Last 5 updated
-    recent_activities = []
-    for a in sorted(apps, key=lambda x: x["updated_at"], reverse=True)[:5]:
+    recent_activities: list[dict] = []
+    for a in sorted(apps, key=lambda x: x.get("updated_at", ""), reverse=True)[:5]:
         recent_activities.append({
             "id": a["id"],
             "title": f"{a['post_name']} @ {a['organization_name']}",
             "job_id": a["job_id"],
             "status": a["status"],
-            "date": a["updated_at"][:10],
+            "date": (a.get("updated_at") or "")[:10],
             "action": "Updated",
         })
 
     return {
-        "total_applications":    total,
-        "submitted_count":       submitted,
-        "upcoming_exams_count":  exam_scheduled,
-        "shortlisted_count":     shortlisted,
-        "rejected_count":        rejected,
-        "pending_admit_cards":   pending_admit,
+        "total_applications":      total,
+        "submitted_count":         submitted,
+        "upcoming_exams_count":    exam_scheduled,
+        "shortlisted_count":       shortlisted,
+        "rejected_count":          rejected,
+        "pending_admit_cards":     pending_admit,
         "upcoming_deadlines_count": 0,
-        "status_distribution":   status_distribution,
-        "recent_activities":     recent_activities,
+        "status_distribution":     status_distribution,
+        "recent_activities":       recent_activities,
     }
 
 
 @router.get("/meta/organizations", summary="Distinct organizations for filter dropdown")
 async def get_organizations():
-    orgs = sorted({a["organization_name"] for a in _applications if a["organization_name"]})
+    orgs = sorted({a["organization_name"] for a in _applications if a.get("organization_name")})
     return {"organizations": orgs}
 
 
-@router.get("/seat-plan", summary="Exam seat plan stub")
+@router.get("/seat-plan", summary="Exam seat plan lookup for Notice 357/2026")
 async def get_seat_plan(roll: Optional[int] = Query(None)):
+    matched_center = None
+    if roll:
+        for c in BB_357_CENTRES:
+            if c["roll_from"] <= roll <= c["roll_to"]:
+                matched_center = c
+                break
+
     return {
-        "exam_date": None,
-        "exam_time": None,
-        "report_by": None,
-        "total_candidates": 0,
-        "total_centres": 0,
-        "notice": None,
-        "centres": [],
-        "centers": [],
+        "notice": "BSCS Notice No. 357/2026 (Job ID-26101 Senior Officer)",
+        "exam_date": "2026-11-13",
+        "exam_time": "03:00 PM – 04:00 PM",
+        "report_by": "02:00 PM",
+        "total_candidates": 120529,
+        "total_centres": len(BB_357_CENTRES),
+        "centres": BB_357_CENTRES,
+        "centers": BB_357_CENTRES,
         "roll": roll,
-        "matched": False,
-        "centre": None,
-        "matched_center": None,
-        "message": "No seat plan data available yet",
+        "matched": matched_center is not None,
+        "centre": matched_center,
+        "matched_center": matched_center,
+        "message": (
+            f"Roll {roll} allocated to Centre #{matched_center['centre_no']}: {matched_center['name']}, {matched_center['area']}"
+            if matched_center else ("Enter roll number to find your allocated examination center" if not roll else f"Roll {roll} not found in Notice 357/2026 ranges")
+        ),
     }
 
 
@@ -167,13 +219,13 @@ async def get_seat_plan(roll: Optional[int] = Query(None)):
 # Collection endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
-@router.get("/", summary="List applications with pagination and filtering")
+@router.get("/", summary="List applications with pagination, search & filter")
 async def list_applications(
     search:       Optional[str] = Query(None),
     status:       Optional[str] = Query(None),
     organization: Optional[str] = Query(None),
-    page:         int           = Query(1,  ge=1),
-    page_size:    int           = Query(20, ge=1, le=100),
+    page:         int           = Query(1,     ge=1),
+    page_size:    int           = Query(20,    ge=1, le=100),
     sort_by:      Optional[str] = Query(None),
     sort_order:   str           = Query("desc"),
 ):
@@ -183,14 +235,15 @@ async def list_applications(
         q = search.lower()
         apps = [
             a for a in apps
-            if q in a["organization_name"].lower()
-            or q in a["post_name"].lower()
-            or q in (a["job_id"] or "").lower()
+            if q in a.get("organization_name", "").lower()
+            or q in a.get("post_name", "").lower()
+            or q in str(a.get("job_id", "")).lower()
+            or q in str(a.get("roll_number", "")).lower()
         ]
     if status and status != "All":
-        apps = [a for a in apps if a["status"] == status]
+        apps = [a for a in apps if a.get("status") == status]
     if organization and organization != "All":
-        apps = [a for a in apps if a["organization_name"] == organization]
+        apps = [a for a in apps if a.get("organization_name") == organization]
 
     key     = sort_by or "updated_at"
     reverse = sort_order != "asc"
@@ -213,20 +266,20 @@ async def list_applications(
     }
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create application")
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new application")
 async def create_application(payload: ApplicationCreate):
     global _next_id
-    app = _build(_next_id, payload.model_dump())
+    app = _build_app(_next_id, payload.model_dump())
     _applications.append(app)
     _next_id += 1
     return app
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Item-level endpoints — MUST come after all named routes
+# Item-level endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
-@router.get("/{item_id}", summary="Get single application")
+@router.get("/{item_id}", summary="Get single application by ID")
 async def get_application(item_id: int):
     for a in _applications:
         if a["id"] == item_id:
@@ -234,18 +287,22 @@ async def get_application(item_id: int):
     raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.patch("/{item_id}", summary="Update application")
+@router.patch("/{item_id}", summary="Partially update an application")
 async def update_application(item_id: int, payload: ApplicationUpdate):
     for a in _applications:
         if a["id"] == item_id:
-            updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
+            updates = payload.model_dump(exclude_unset=True)
             a.update(updates)
-            a["updated_at"] = _now()
+            a["updated_at"] = _utcnow()
             return a
     raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete application")
+@router.delete(
+    "/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an application",
+)
 async def delete_application(item_id: int):
     global _applications
     before = len(_applications)

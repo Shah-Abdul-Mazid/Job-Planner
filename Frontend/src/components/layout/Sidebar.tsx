@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   LayoutDashboard, Briefcase, Calendar, FileText,
-  Bot, Bell, Settings, HelpCircle, Building2,
-  Users, CheckCircle2, ChevronLeft, ChevronRight, UserCheck, Shield
+  Bot, Bell, Building2, Users, ChevronLeft, ChevronRight,
+  UserCheck, FileSpreadsheet, FileCheck2
 } from 'lucide-react';
 
 export type NavItemKey = 
@@ -12,6 +12,8 @@ export type NavItemKey =
   | 'companies' 
   | 'interviews' 
   | 'calendar' 
+  | 'admit-upload'
+  | 'seatplan-upload'
   | 'documents' 
   | 'assistant' 
   | 'notifications';
@@ -34,9 +36,10 @@ const MAIN_MENU = [
 ];
 
 const TOOLS_MENU = [
-  { key: 'documents' as NavItemKey,    label: 'Documents & Admit', icon: FileText },
-  { key: 'assistant' as NavItemKey,    label: 'AI Coach & Intel',  icon: Bot },
-  { key: 'notifications' as NavItemKey,label: 'Notifications',     icon: Bell, hasBadge: true },
+  { key: 'admit-upload' as NavItemKey,    label: 'Admit Card Upload',     icon: FileCheck2 },
+  { key: 'seatplan-upload' as NavItemKey, label: 'Seat Plan & Schedule',  icon: FileSpreadsheet },
+  { key: 'assistant' as NavItemKey,       label: 'AI Coach & Intel',      icon: Bot },
+  { key: 'notifications' as NavItemKey,   label: 'Notifications',         icon: Bell, hasBadge: true },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -131,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Tools Section */}
         <div className={`${collapsed ? 'my-3' : 'mt-6 mb-2'}`}>
-          {!collapsed && <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-3 pb-2">Intelligence &amp; Tools</p>}
+          {!collapsed && <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-3 pb-2">Intelligence &amp; Uploads</p>}
           {collapsed && <div className="border-t mx-2 my-3 border-zinc-800" />}
         </div>
         {TOOLS_MENU.map(renderItem)}

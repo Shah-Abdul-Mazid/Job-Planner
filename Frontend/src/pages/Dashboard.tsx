@@ -79,18 +79,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 
-  const totalApps = stats?.total_applications ?? 6;
-  const submittedCount = stats?.status_distribution?.find(s => s.status === 'Submitted')?.count ?? 5;
-  const examCount = stats?.upcoming_exams_count ?? 1;
+  const totalApps = stats?.total_applications ?? 0;
+  const submittedCount = stats?.submitted_count ?? 0;
+  const examCount = stats?.upcoming_exams_count ?? 0;
   const rejectedCount = stats?.rejected_count ?? 0;
 
-  // Donut chart data categorized by major recruitment tracks
-  const categoryData = [
-    { name: 'Engineering / IT', count: 4, color: '#f59e0b' },
-    { name: 'General Banking', count: 1, color: '#3b82f6' },
-    { name: 'Non-Cadre Govt', count: 1, color: '#ec4899' },
-    { name: 'Financial Inst.', count: 0, color: '#10b981' },
-  ];
+  // Donut chart — built from live status_distribution
+  const categoryData = stats?.status_distribution?.length
+    ? stats.status_distribution.map((s, i) => ({
+        name: s.status,
+        count: s.count,
+        color: DONUT_COLORS[i % DONUT_COLORS.length],
+      }))
+    : [{ name: 'No data yet', count: 1, color: '#3f3f46' }];
 
   return (
     <div className="space-y-6">
@@ -344,7 +345,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {/* Confirmed Exam Item */}
+            {/* Confirmed Exam — from seed */}
             <div className="p-3 rounded-xl bg-amber-400/90 text-zinc-950 font-medium space-y-1">
               <div className="flex items-center justify-between text-xs font-black">
                 <span>MCQ Examination</span>
@@ -366,14 +367,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </p>
             </div>
 
-            {/* Other jobs pending */}
+            {/* Pending exams */}
             <div className="p-3 rounded-xl bg-zinc-800/90 text-zinc-200 border border-zinc-700/60 space-y-1">
               <div className="flex items-center justify-between text-xs font-bold text-white">
-                <span>BPSC Assistant Network Engineer</span>
+                <span>5 Other Applications</span>
                 <span className="text-[10px] text-zinc-400">TBD</span>
               </div>
               <p className="text-[11px] text-zinc-400 leading-tight">
-                Date will be announced by BPSC Secretariat
+                Admit cards not yet issued — monitor portals
               </p>
             </div>
           </div>
@@ -390,10 +391,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="space-y-3">
             {[
-              { title: 'Admit Card Verification', progress: '100%', sub: 'Combined 9 Banks #26101', done: true },
-              { title: 'Seat Plan Allocated', progress: '100%', sub: 'Centre 3 (Roll 116683)', done: true },
-              { title: 'BHTPA Admit Download', progress: '35%', sub: 'Waiting for official circular', done: false },
-              { title: 'BPSC Notice Monitoring', progress: '50%', sub: 'Assistant Network Engineer #BPSC-702', done: false },
+              { title: 'Admit Card Verified', progress: '100%', sub: 'Combined 9 Banks #26101 — Roll 116683', done: true },
+              { title: 'Seat Plan Allocated', progress: '100%', sub: 'Centre 3 · Shamsul Hoque Khan School', done: true },
+              { title: 'Upload Admit Cards', progress: `${examCount > 0 ? 100 : 0}%`, sub: 'Upload PDF via Documents & Admit', done: examCount > 0 },
+              { title: 'Monitor 5 Portals', progress: '0%', sub: 'Waiting for exam notices (26104–26109)', done: false },
             ].map((task) => (
               <div key={task.title} className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
                 <div>
@@ -408,11 +409,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* 3. Current Vacancies & Targeted Positions (6 cols) */}
+        {/* 3. Targeted Positions — live from seed/backend */}
         <div className="lg:col-span-6 card p-5 flex flex-col justify-between" style={{ background: '#121217', border: '1px solid #1f1f28' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-sm font-bold text-white">Targeted Recruitment Positions (06)</h3>
+              <h3 className="text-sm font-bold text-white">Targeted Recruitment Positions ({String(totalApps).padStart(2, '0')})</h3>
               <p className="text-[11px] text-zinc-500">Government &amp; Scheduled Bank Openings</p>
             </div>
             <div className="flex items-center gap-2">
@@ -421,68 +422,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              {
-                title: 'Senior Officer (General)',
-                org: 'Combined 9 Banks & 2 FIs',
-                jobId: '26101',
-                type: 'Grade-9',
-                salary: '৳22,000 – ৳53,060',
-                status: 'Exam Scheduled',
-                statusColor: '#f59e0b',
-              },
-              {
-                title: 'Assistant Programmer',
-                org: 'Combined 8 Banks',
-                jobId: '26106',
-                type: 'Grade-9',
-                salary: '৳22,000 – ৳53,060',
-                status: 'Submitted',
-                statusColor: '#3b82f6',
-              },
-              {
-                title: 'Assistant Network Engineer',
-                org: 'BPSC (Non-Cadre)',
-                jobId: 'BPSC-702',
-                type: 'Grade-9',
-                salary: '৳22,000 – ৳53,060',
-                status: 'Submitted',
-                statusColor: '#3b82f6',
-              },
-              {
-                title: 'Assistant Database Admin',
-                org: 'Sonali Bank PLC',
-                jobId: '26109',
-                type: 'Grade-9',
-                salary: '৳22,000 – ৳53,060',
-                status: 'Submitted',
-                statusColor: '#3b82f6',
-              },
-            ].map((vac) => (
-              <div key={vac.jobId} className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-purple-500/40 transition-colors flex flex-col justify-between space-y-2">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 pr-2">
-                    <p className="text-xs font-bold text-white truncate">{vac.title}</p>
-                    <p className="text-[10px] text-zinc-400 truncate mt-0.5">{vac.org}</p>
+            {(stats?.recent_activities?.length
+              ? stats.recent_activities.slice(0, 4)
+              : [
+                  { id: 1, title: 'Senior Officer (General) @ Combined 9 Banks & 2 FIs', job_id: '26101', status: 'Exam Scheduled', date: '2026-11-13', action: '' },
+                  { id: 2, title: 'Assistant Programmer @ Combined 8 Banks', job_id: '26106', status: 'Submitted', date: '', action: '' },
+                  { id: 3, title: 'Asst. Database Admin @ Sonali Bank PLC', job_id: '26109', status: 'Submitted', date: '', action: '' },
+                  { id: 4, title: 'Officer IT/MIS @ Combined 10 Banks', job_id: '26105', status: 'Submitted', date: '', action: '' },
+                ]
+            ).map((vac) => {
+              const [postPart, orgPart] = (vac.title || '').split('@');
+              const statusColor = vac.status === 'Exam Scheduled' ? '#f59e0b' : vac.status === 'Shortlisted' ? '#10b981' : '#3b82f6';
+              return (
+                <div key={vac.id} className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-purple-500/40 transition-colors flex flex-col justify-between space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 pr-2">
+                      <p className="text-xs font-bold text-white truncate">{postPart?.trim()}</p>
+                      <p className="text-[10px] text-zinc-400 truncate mt-0.5">{orgPart?.trim()}</p>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-purple-300">
+                      #{vac.job_id}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-purple-300">
-                    #{vac.jobId}
-                  </span>
+                  <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80 text-[10px]">
+                    <span className="font-semibold" style={{ color: statusColor }}>{vac.status}</span>
+                    <button onClick={onNavigateToApplications} className="text-zinc-500 hover:text-white flex items-center gap-0.5">
+                      View <ArrowUpRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
-                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">{vac.type}</span>
-                  <span>{vac.salary}</span>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80 text-[10px]">
-                  <span className="font-semibold" style={{ color: vac.statusColor }}>{vac.status}</span>
-                  <button onClick={onNavigateToApplications} className="text-zinc-500 hover:text-white flex items-center gap-0.5">
-                    View <ArrowUpRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
