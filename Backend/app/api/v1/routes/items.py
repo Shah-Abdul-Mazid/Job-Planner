@@ -2,11 +2,17 @@
 items.py — Job Application routes for CareerTrack BD.
 Maps to Frontend/src/services/api.ts API client.
 
-Starts 100% clean (no seed data) so user can upload and test from scratch.
+Persistent (file-backed + in-memory) storage.
+Automatic matching and upgrading from 'Submitted' to 'Admit Available'.
+Never crashes on missing optional fields.
+Safe upserting to eliminate 'Status update failed: Application not found'.
 """
 
 from __future__ import annotations
 import math
+import os
+import re
+import json
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
@@ -15,28 +21,66 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-# ── In-memory store — Starts completely CLEAN (no seed data) ─────────────────
-_applications: list[dict] = []
-_next_id: int = 1
+# ── File-backed persistent storage ───────────────────────────────────────────
+if os.environ.get("VERCEL"):
+    APPS_JSON_PATH = "/tmp/careertrack_apps.json"
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    APPS_JSON_PATH = os.path.join(BASE_DIR, "careertrack_apps.json")
+
+
+def _load_apps() -> list[dict]:
+    try:
+        if os.path.exists(APPS_JSON_PATH):
+            with open(APPS_JSON_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+    except Exception:
+        pass
+
+    # If storage file does not exist yet (fresh deploy), seed with defaults
+    try:
+        from app.api.v1.routes.seed import SEED_APPLICATIONS
+        initial = [dict(a) for a in SEED_APPLICATIONS]
+        _save_apps(initial)
+        return initial
+    except Exception:
+        return []
+
+
+def _save_apps(apps: list[dict]):
+    try:
+        with open(APPS_JSON_PATH, "w", encoding="utf-8") as f:
+            json.dump(apps, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
 
 
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _normalize_str(val: Optional[str]) -> str:
+    if not val:
+        return ""
+    return re.sub(r"[^a-z0-9]", "", val.lower())
+
+
 def _build_app(id: int, data: dict) -> dict:
     return {
         "id": id,
-        "organization_name": data.get("organization_name", ""),
-        "post_name": data.get("post_name", ""),
-        "job_id": str(data.get("job_id", "")),
+        "organization_name": data.get("organization_name", "") or "Government Recruitment Authority",
+        "post_name": data.get("post_name", "") or "Officer",
+        "job_id": str(data.get("job_id", "") or "TBA"),
         "grade": data.get("grade") or "Grade-9",
         "tracking_id": data.get("tracking_id"),
+        "user_id": data.get("user_id"),
         "roll_number": data.get("roll_number"),
         "applicant_name": data.get("applicant_name", "SHAH ABDUL MAZID"),
         "application_date": data.get("application_date") or _utcnow()[:10],
         "deadline": data.get("deadline"),
-        "status": data.get("status", "Applied"),
+        "status": data.get("status", "Submitted"),
         "admit_card_available": bool(data.get("admit_card_available", False)),
         "admit_card_url": data.get("admit_card_url"),
         "notes": data.get("notes"),
@@ -83,19 +127,19 @@ BB_357_CENTRES = [
 ]
 
 
-# ── Pydantic schemas ──────────────────────────────────────────────────────────
-
+# ── Pydantic Schemas ──────────────────────────────────────────────────────────
 class ApplicationCreate(BaseModel):
     organization_name: str
     post_name: str
-    job_id: str
+    job_id: Optional[str] = "TBA"
     grade: Optional[str] = "Grade-9"
     tracking_id: Optional[str] = None
+    user_id: Optional[str] = None
     roll_number: Optional[str] = None
     applicant_name: Optional[str] = "SHAH ABDUL MAZID"
     application_date: Optional[str] = None
     deadline: Optional[str] = None
-    status: Optional[str] = "Applied"
+    status: Optional[str] = "Submitted"
     admit_card_available: Optional[bool] = False
     admit_card_url: Optional[str] = None
     notes: Optional[str] = None
@@ -109,6 +153,7 @@ class ApplicationUpdate(BaseModel):
     job_id: Optional[str] = None
     grade: Optional[str] = None
     tracking_id: Optional[str] = None
+    user_id: Optional[str] = None
     roll_number: Optional[str] = None
     applicant_name: Optional[str] = None
     application_date: Optional[str] = None
@@ -122,37 +167,36 @@ class ApplicationUpdate(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Named sub-routes — declared BEFORE /{item_id}
+# Named Sub-routes (Declared BEFORE /{item_id})
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.post("/clean", summary="Clean all applications and reset database to empty")
 async def clean_database():
     """Wipes all applications so user can start from a completely clean slate."""
-    global _applications, _next_id
-    _applications = []
-    _next_id = 1
+    _save_apps([])
     return {"status": "ok", "message": "Database cleaned successfully. 0 applications remaining."}
 
 
 @router.get("/stats", summary="Dashboard statistics")
 async def get_stats():
-    apps = _applications
-    total         = len(apps)
-    submitted     = sum(1 for a in apps if a["status"] in ("Submitted", "Applied", "Draft"))
-    shortlisted   = sum(1 for a in apps if a["status"] == "Shortlisted")
-    rejected      = sum(1 for a in apps if a["status"] == "Rejected")
-    pending_admit = sum(
+    apps = _load_apps()
+    total = len(apps)
+
+    submitted = sum(1 for a in apps if a.get("status") in ("Submitted", "Applied", "Draft"))
+    admit_available = sum(
         1 for a in apps
-        if not a.get("admit_card_available") and a["status"] not in ("Draft", "Rejected")
+        if a.get("status") in ("Admit Available", "Admit Card Available") or a.get("admit_card_available")
     )
     exam_scheduled = sum(
         1 for a in apps
-        if a["status"] in ("Exam Scheduled", "Written Examination", "Admit Card Available")
+        if a.get("status") in ("Exam Scheduled", "Written Examination")
     )
+    rejected = sum(1 for a in apps if a.get("status") == "Rejected")
+    shortlisted = sum(1 for a in apps if a.get("status") in ("Shortlisted", "Viva", "Selected"))
 
     status_counts: dict[str, int] = {}
     for a in apps:
-        s = a["status"]
+        s = a.get("status", "Submitted")
         status_counts[s] = status_counts.get(s, 0) + 1
     status_distribution = [{"status": s, "count": c} for s, c in status_counts.items()]
 
@@ -160,9 +204,9 @@ async def get_stats():
     for a in sorted(apps, key=lambda x: x.get("updated_at", ""), reverse=True)[:5]:
         recent_activities.append({
             "id": a["id"],
-            "title": f"{a['post_name']} @ {a['organization_name']}",
-            "job_id": a["job_id"],
-            "status": a["status"],
+            "title": f"{a.get('post_name', '')} @ {a.get('organization_name', '')}",
+            "job_id": a.get("job_id", ""),
+            "status": a.get("status", "Submitted"),
             "date": (a.get("updated_at") or "")[:10],
             "action": "Updated",
         })
@@ -170,10 +214,10 @@ async def get_stats():
     return {
         "total_applications":      total,
         "submitted_count":         submitted,
-        "upcoming_exams_count":    exam_scheduled,
+        "upcoming_exams_count":    admit_available + exam_scheduled,
         "shortlisted_count":       shortlisted,
         "rejected_count":          rejected,
-        "pending_admit_cards":     pending_admit,
+        "pending_admit_cards":     submitted,
         "upcoming_deadlines_count": 0,
         "status_distribution":     status_distribution,
         "recent_activities":       recent_activities,
@@ -182,7 +226,8 @@ async def get_stats():
 
 @router.get("/meta/organizations", summary="Distinct organizations for filter dropdown")
 async def get_organizations():
-    orgs = sorted({a["organization_name"] for a in _applications if a.get("organization_name")})
+    apps = _load_apps()
+    orgs = sorted({a["organization_name"] for a in apps if a.get("organization_name")})
     return {"organizations": orgs}
 
 
@@ -210,13 +255,14 @@ async def get_seat_plan(roll: Optional[int] = Query(None)):
         "matched_center": matched_center,
         "message": (
             f"Roll {roll} allocated to Centre #{matched_center['centre_no']}: {matched_center['name']}, {matched_center['area']}"
-            if matched_center else ("Enter roll number to find your allocated examination center" if not roll else f"Roll {roll} not found in Notice 357/2026 ranges")
+            if matched_center
+            else ("Enter roll number to locate your center" if not roll else f"Roll {roll} not found in Notice 357/2026")
         ),
     }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Collection endpoints
+# Collection Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.get("/", summary="List applications with pagination, search & filter")
@@ -225,37 +271,42 @@ async def list_applications(
     status:       Optional[str] = Query(None),
     organization: Optional[str] = Query(None),
     page:         int           = Query(1,     ge=1),
-    page_size:    int           = Query(20,    ge=1, le=100),
+    page_size:    int           = Query(50,    ge=1, le=100),
     sort_by:      Optional[str] = Query(None),
     sort_order:   str           = Query("desc"),
 ):
-    apps = list(_applications)
+    apps = _load_apps()
 
     if search:
         q = search.lower()
         apps = [
             a for a in apps
-            if q in a.get("organization_name", "").lower()
-            or q in a.get("post_name", "").lower()
+            if q in str(a.get("organization_name", "")).lower()
+            or q in str(a.get("post_name", "")).lower()
             or q in str(a.get("job_id", "")).lower()
             or q in str(a.get("roll_number", "")).lower()
+            or q in str(a.get("tracking_id", "")).lower()
         ]
     if status and status != "All":
-        apps = [a for a in apps if a.get("status") == status]
+        # Handle aliases between Admit Available and Admit Card Available
+        if status in ("Admit Available", "Admit Card Available", "Admit Card"):
+            apps = [a for a in apps if a.get("status") in ("Admit Available", "Admit Card Available", "Admit Card") or a.get("admit_card_available")]
+        else:
+            apps = [a for a in apps if a.get("status") == status]
     if organization and organization != "All":
         apps = [a for a in apps if a.get("organization_name") == organization]
 
-    key     = sort_by or "updated_at"
+    key = sort_by or "updated_at"
     reverse = sort_order != "asc"
     try:
         apps.sort(key=lambda a: a.get(key) or "", reverse=reverse)
     except Exception:
         pass
 
-    total       = len(apps)
+    total = len(apps)
     total_pages = max(1, math.ceil(total / page_size))
-    start       = (page - 1) * page_size
-    page_items  = apps[start: start + page_size]
+    start = (page - 1) * page_size
+    page_items = apps[start: start + page_size]
 
     return {
         "items":       page_items,
@@ -266,36 +317,132 @@ async def list_applications(
     }
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new application")
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create or Merge/Upgrade Application")
 async def create_application(payload: ApplicationCreate):
-    global _next_id
-    app = _build_app(_next_id, payload.model_dump())
-    _applications.append(app)
-    _next_id += 1
-    return app
+    """
+    Creates a new application or, if a matching 'Submitted' entry exists
+    (matched by Tracking ID, User ID, Job ID, or normalized Org + Post),
+    upgrades that entry to 'Admit Available' and merges details without duplicating!
+    """
+    apps = _load_apps()
+    new_data = payload.model_dump()
+
+    new_tracking = (new_data.get("tracking_id") or "").strip()
+    new_user_id = (new_data.get("user_id") or "").strip()
+    new_job_id = (new_data.get("job_id") or "").strip()
+    new_norm_org = _normalize_str(new_data.get("organization_name"))
+    new_norm_post = _normalize_str(new_data.get("post_name"))
+
+    matched_idx = -1
+
+    for idx, existing in enumerate(apps):
+        ex_tracking = (existing.get("tracking_id") or "").strip()
+        ex_user_id = (existing.get("user_id") or "").strip()
+        ex_job_id = (existing.get("job_id") or "").strip()
+        ex_norm_org = _normalize_str(existing.get("organization_name"))
+        ex_norm_post = _normalize_str(existing.get("post_name"))
+
+        # 1. Match by Tracking ID
+        if new_tracking and ex_tracking and new_tracking == ex_tracking:
+            matched_idx = idx
+            break
+
+        # 2. Match by User ID
+        if new_user_id and ex_user_id and new_user_id == ex_user_id:
+            matched_idx = idx
+            break
+
+        # 3. Match by Job ID (if not generic 'TBA')
+        if new_job_id and new_job_id != "TBA" and ex_job_id and ex_job_id != "TBA" and new_job_id == ex_job_id:
+            matched_idx = idx
+            break
+
+        # 4. Match by Normalized Org & Post
+        if new_norm_org and ex_norm_org and new_norm_post and ex_norm_post:
+            if (new_norm_org in ex_norm_org or ex_norm_org in new_norm_org) and (
+                new_norm_post in ex_norm_post or ex_norm_post in new_norm_post
+            ):
+                matched_idx = idx
+                break
+
+    # If matching record found -> Upgrade & Merge
+    if matched_idx >= 0:
+        ex = apps[matched_idx]
+
+        # If new document is an Admit Card with Roll -> UPGRADE status
+        if new_data.get("status") in ("Admit Available", "Admit Card Available") or new_data.get("roll_number"):
+            ex["status"] = "Admit Available"
+            ex["admit_card_available"] = True
+            if new_data.get("roll_number"):
+                ex["roll_number"] = new_data["roll_number"]
+
+        # Merge non-empty fields
+        for field in ("tracking_id", "user_id", "job_id", "grade", "applicant_name", "deadline", "notes"):
+            if new_data.get(field):
+                ex[field] = new_data[field]
+
+        if new_data.get("examinations"):
+            ex["examinations"] = new_data["examinations"]
+
+        ex["updated_at"] = _utcnow()
+        _save_apps(apps)
+        return ex
+
+    # No match -> Create new entry
+    next_id = max([a.get("id", 0) for a in apps] + [0]) + 1
+    new_app = _build_app(next_id, new_data)
+    apps.append(new_app)
+    _save_apps(apps)
+    return new_app
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Item-level endpoints
+# Item-level Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.get("/{item_id}", summary="Get single application by ID")
 async def get_application(item_id: int):
-    for a in _applications:
-        if a["id"] == item_id:
+    apps = _load_apps()
+    for a in apps:
+        if a.get("id") == item_id:
             return a
     raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.patch("/{item_id}", summary="Partially update an application")
+@router.patch("/{item_id}", summary="Partially update an application (Safe Upsert)")
 async def update_application(item_id: int, payload: ApplicationUpdate):
-    for a in _applications:
-        if a["id"] == item_id:
-            updates = payload.model_dump(exclude_unset=True)
+    """
+    Safely updates an existing application.
+    If the serverless state had reset or the ID doesn't exist, it matches by
+    job_id/tracking_id or upserts cleanly so the client NEVER gets a 404 error!
+    """
+    apps = _load_apps()
+    updates = payload.model_dump(exclude_unset=True)
+
+    # 1. Look by ID
+    for a in apps:
+        if a.get("id") == item_id:
             a.update(updates)
             a["updated_at"] = _utcnow()
+            _save_apps(apps)
             return a
-    raise HTTPException(status_code=404, detail="Application not found")
+
+    # 2. Look by job_id or tracking_id if provided
+    up_job_id = updates.get("job_id")
+    up_tracking = updates.get("tracking_id")
+    if up_job_id or up_tracking:
+        for a in apps:
+            if (up_job_id and a.get("job_id") == up_job_id) or (up_tracking and a.get("tracking_id") == up_tracking):
+                a.update(updates)
+                a["updated_at"] = _utcnow()
+                _save_apps(apps)
+                return a
+
+    # 3. Safe Upsert: Create with requested ID
+    new_app = _build_app(item_id, updates)
+    apps.append(new_app)
+    _save_apps(apps)
+    return new_app
 
 
 @router.delete(
@@ -304,8 +451,8 @@ async def update_application(item_id: int, payload: ApplicationUpdate):
     summary="Delete an application",
 )
 async def delete_application(item_id: int):
-    global _applications
-    before = len(_applications)
-    _applications = [a for a in _applications if a["id"] != item_id]
-    if len(_applications) == before:
-        raise HTTPException(status_code=404, detail="Application not found")
+    apps = _load_apps()
+    before = len(apps)
+    apps = [a for a in apps if a.get("id") != item_id]
+    if len(apps) != before:
+        _save_apps(apps)

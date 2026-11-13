@@ -9,6 +9,7 @@ interface BadgeProps {
 export const StatusBadge: React.FC<BadgeProps> = ({ status, className = '' }) => {
   const getStyle = (status: string): React.CSSProperties => {
     switch (status) {
+      case 'Admit Available':
       case 'Admit Card Available':
         return { background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)' };
       case 'Exam Scheduled':

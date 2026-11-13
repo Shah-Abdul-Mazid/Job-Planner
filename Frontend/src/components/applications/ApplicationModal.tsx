@@ -23,11 +23,12 @@ const COMMON_ORGS = [
 ];
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
-  'Draft',
-  'Applied',
   'Submitted',
+  'Admit Available',
   'Admit Card Available',
   'Exam Scheduled',
+  'Draft',
+  'Applied',
   'Shortlisted',
   'Written Examination',
   'Viva',

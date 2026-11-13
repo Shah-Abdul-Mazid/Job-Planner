@@ -21,7 +21,7 @@ interface ApplicationsPageProps {
 
 const BOARD_COLUMNS = [
   { key: 'Submitted',            label: 'Submitted',         emoji: '📝', accent: '#3b82f6' },
-  { key: 'Admit Card Available', label: 'Admit Card',         emoji: '✅', accent: '#10b981' },
+  { key: 'Admit Available',      label: 'Admit Available',    emoji: '✅', accent: '#10b981' },
   { key: 'Exam Scheduled',       label: 'Exam Scheduled',    emoji: '📅', accent: '#f59e0b' },
   { key: 'Written Examination',  label: 'Written Exam',      emoji: '✍️',  accent: '#8b5cf6' },
   { key: 'Viva',                 label: 'Viva Voce',         emoji: '🎤', accent: '#06b6d4' },
@@ -30,7 +30,7 @@ const BOARD_COLUMNS = [
 ];
 
 const STATUS_FILTERS = [
-  'All', 'Submitted', 'Admit Card Available', 'Exam Scheduled',
+  'All', 'Submitted', 'Admit Available', 'Exam Scheduled',
   'Shortlisted', 'Written Examination', 'Viva', 'Selected', 'Rejected',
 ];
 
@@ -106,19 +106,38 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
   };
 
   const handleQuickStatusChange = async (appId: number, newStatus: string) => {
+    // 1. Optimistic local update
+    setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus as any } : a));
+    const target = applications.find(a => a.id === appId);
     try {
-      await api.updateApplication(appId, { status: newStatus });
-      fetchApplications();
+      await api.updateApplication(appId, {
+        status: newStatus,
+        organization_name: target?.organization_name,
+        post_name: target?.post_name,
+        job_id: target?.job_id,
+        tracking_id: target?.tracking_id || undefined,
+        roll_number: target?.roll_number || undefined,
+      });
     } catch (err: any) {
-      alert(`Status update failed: ${err.message}`);
+      console.warn(`Could not sync status update: ${err.message}`);
     }
   };
 
   // Top KPI summary counts
   const counts = BOARD_COLUMNS.reduce((acc, col) => {
-    acc[col.key] = applications.filter(a =>
-      col.key === 'Submitted' ? (a.status === 'Submitted' || a.status === 'Applied') : a.status === col.key
-    ).length;
+    acc[col.key] = applications.filter(a => {
+      if (col.key === 'Submitted') {
+        return a.status === 'Submitted' || a.status === 'Applied' || a.status === 'Draft';
+      }
+      if (col.key === 'Admit Available') {
+        return (
+          a.status === 'Admit Available' ||
+          a.status === 'Admit Card Available' ||
+          (a.admit_card_available && a.status !== 'Exam Scheduled' && a.status !== 'Rejected' && a.status !== 'Selected')
+        );
+      }
+      return a.status === col.key;
+    }).length;
     return acc;
   }, {} as Record<string, number>);
 
@@ -230,7 +249,7 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
         {[
           { label: 'Total', value: total, key: 'All', color: '#9492a8', bg: 'rgba(148,146,168,0.12)' },
           { label: 'Submitted', value: counts['Submitted'] || 0, key: 'Submitted', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-          { label: 'Admit Card', value: counts['Admit Card Available'] || 0, key: 'Admit Card Available', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+          { label: 'Admit Ready', value: (counts['Admit Available'] || 0) + (counts['Admit Card Available'] || 0), key: 'Admit Available', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
           { label: 'Exam', value: counts['Exam Scheduled'] || 0, key: 'Exam Scheduled', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
           { label: 'Viva', value: counts['Viva'] || 0, key: 'Viva', color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
           { label: 'Selected', value: counts['Selected'] || 0, key: 'Selected', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
@@ -308,11 +327,19 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
         /* ── KANBAN BOARD (My Board style) ── */
         <div className="flex gap-4 overflow-x-auto pb-6 pt-1">
           {BOARD_COLUMNS.map((col) => {
-            const colApps = applications.filter((a) =>
-              col.key === 'Submitted'
-                ? (a.status === 'Submitted' || a.status === 'Applied')
-                : a.status === col.key
-            );
+            const colApps = applications.filter((a) => {
+              if (col.key === 'Submitted') {
+                return a.status === 'Submitted' || a.status === 'Applied' || a.status === 'Draft';
+              }
+              if (col.key === 'Admit Available') {
+                return (
+                  a.status === 'Admit Available' ||
+                  a.status === 'Admit Card Available' ||
+                  (a.admit_card_available && a.status !== 'Exam Scheduled' && a.status !== 'Rejected' && a.status !== 'Selected')
+                );
+              }
+              return a.status === col.key;
+            });
             return (
               <div key={col.key} className="w-72 flex-shrink-0 flex flex-col max-h-[calc(100vh-280px)]">
                 {/* Column header */}

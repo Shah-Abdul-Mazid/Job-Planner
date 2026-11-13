@@ -27,3 +27,10 @@ Frontend/dist/
 # OS
 Thumbs.db
 [Dd]esktop.ini
+
+# App Uploads & Temp Data
+Backend/app/uploads/
+*.json.bak
+careertrack_apps.json
+careertrack_docs.json
+

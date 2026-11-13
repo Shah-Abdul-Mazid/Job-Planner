@@ -26,6 +26,7 @@ export type ApplicationStatus =
   | 'Draft'
   | 'Applied'
   | 'Submitted'
+  | 'Admit Available'
   | 'Admit Card Available'
   | 'Exam Scheduled'
   | 'Shortlisted'
