@@ -24,6 +24,8 @@ export function App() {
   const [isBackendConnected, setIsBackendConnected] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [pendingSeatPlanCount, setPendingSeatPlanCount] = useState<number>(0);
+  const [realAdmitCount, setRealAdmitCount] = useState<number>(0);
+  const [realSubmittedCount, setRealSubmittedCount] = useState<number>(0);
 
   const fetchGlobalStats = async () => {
     try {
@@ -32,10 +34,22 @@ export function App() {
       setIsBackendConnected(true);
 
       const appRes = await api.getApplications({ page_size: 100 });
-      const pending = (appRes.items || []).filter(
+      const apps = appRes.items || [];
+      const pending = apps.filter(
         a => (a.status === 'Admit Available' || a.admit_card_available) && a.seat_plan_status === 'Pending'
       ).length;
       setPendingSeatPlanCount(pending);
+
+      // Count ONLY actual Admit Available applications (strictly excluding Submitted applications)
+      const admits = apps.filter(
+        a => a.status === 'Admit Available' || a.status === 'Admit Card Available'
+      ).length;
+      setRealAdmitCount(admits);
+
+      const subs = apps.filter(
+        a => a.status === 'Submitted' || a.status === 'Applied' || a.status === 'Draft' || !a.roll_number || a.roll_number === 'Awaiting'
+      ).length;
+      setRealSubmittedCount(subs);
     } catch {
       setIsBackendConnected(false);
     }
@@ -91,8 +105,8 @@ export function App() {
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        submittedCount={dashboardStats?.submitted_count ?? 5}
-        admitCount={dashboardStats?.upcoming_exams_count ?? 1}
+        submittedCount={realSubmittedCount || (dashboardStats?.submitted_count ?? 5)}
+        admitCount={realAdmitCount}
         pendingSeatPlanCount={pendingSeatPlanCount}
         totalApplicationsCount={dashboardStats?.total_applications ?? 6}
       />

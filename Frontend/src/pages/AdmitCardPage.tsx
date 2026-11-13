@@ -265,46 +265,57 @@ export const AdmitCardPage: React.FC = () => {
       </div>
 
       {/* ── Uploaded / Archived Admit Cards ── */}
-      <div className="card p-5" style={{ background: '#121217', border: '1px solid #1f1f28' }}>
-        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-          <FileCheck2 className="w-4 h-4 text-purple-400" />
-          Archived Admit Cards ({documents.length})
-        </h3>
+      {(() => {
+        const admitDocuments = documents.filter(
+          (doc) =>
+            (doc.category === 'Admit Card' || doc.status === 'Admit Available' || doc.status === 'Admit Card Available') &&
+            doc.status !== 'Submitted' &&
+            doc.category !== 'Application Copy'
+        );
 
-        {documents.length === 0 ? (
-          <p className="text-xs text-zinc-600 text-center py-6">
-            No admit cards uploaded yet. Drop your first admit card PDF above to start.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-zinc-800">
-                  {['Document File', 'Job ID', 'Roll', 'Category', 'Status', 'Date'].map(h => (
-                    <th key={h} className="text-left text-[10px] font-bold text-zinc-500 uppercase tracking-wide pb-2 pr-4">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2.5 pr-4 text-white font-medium max-w-[220px] truncate">{doc.file_name}</td>
-                    <td className="py-2.5 pr-4 text-purple-300 font-mono font-bold">#{doc.job_id}</td>
-                    <td className="py-2.5 pr-4 text-zinc-300 font-mono">{doc.roll_number}</td>
-                    <td className="py-2.5 pr-4 text-zinc-400">{doc.category}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
-                        {doc.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-zinc-500">{doc.created_at}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        return (
+          <div className="card p-5" style={{ background: '#121217', border: '1px solid #1f1f28' }}>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <FileCheck2 className="w-4 h-4 text-purple-400" />
+              Archived Admit Cards ({admitDocuments.length})
+            </h3>
+
+            {admitDocuments.length === 0 ? (
+              <p className="text-xs text-zinc-600 text-center py-6">
+                No admit cards uploaded yet. Drop your first admit card PDF above to start.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-zinc-800">
+                      {['Document File', 'Job ID', 'Roll', 'Category', 'Status', 'Date'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold text-zinc-500 uppercase tracking-wide pb-2 pr-4">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/50">
+                    {admitDocuments.map((doc) => (
+                      <tr key={doc.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-2.5 pr-4 text-white font-medium max-w-[220px] truncate">{doc.file_name}</td>
+                        <td className="py-2.5 pr-4 text-purple-300 font-mono font-bold">#{doc.job_id}</td>
+                        <td className="py-2.5 pr-4 text-zinc-300 font-mono">{doc.roll_number || 'Assigned'}</td>
+                        <td className="py-2.5 pr-4 text-zinc-400">{doc.category}</td>
+                        <td className="py-2.5 pr-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                            {doc.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-zinc-500">{doc.created_at}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
     </div>
   );
 };

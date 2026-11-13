@@ -99,11 +99,11 @@ def _build_app(id: int, data: dict) -> dict:
         "submit_pdf_url": data.get("submit_pdf_url"),
         "admit_pdf_url": data.get("admit_pdf_url"),
         "seat_plan_pdf_url": data.get("seat_plan_pdf_url"),
-        "seat_plan_status": data.get("seat_plan_status") or ("Seat Plan Ready" if data.get("status") == "Exam Scheduled" else "Pending"),
+        "seat_plan_status": data.get("seat_plan_status") if data.get("status") in ("Admit Available", "Admit Card Available", "Exam Scheduled") else None,
         "application_date": data.get("application_date") or _utcnow()[:10],
         "deadline": data.get("deadline"),
         "status": data.get("status", "Submitted"),
-        "admit_card_available": bool(data.get("admit_card_available", False)),
+        "admit_card_available": bool(data.get("admit_card_available", False)) and data.get("status") != "Submitted",
         "admit_card_url": data.get("admit_card_url"),
         "notes": data.get("notes"),
         "choices": data.get("choices", []),
@@ -255,11 +255,17 @@ async def get_stats():
     submitted = sum(1 for a in apps if a.get("status") in ("Submitted", "Applied", "Draft"))
     admit_available = sum(
         1 for a in apps
-        if a.get("status") in ("Admit Available", "Admit Card Available") or a.get("admit_card_available")
+        if a.get("status") in ("Admit Available", "Admit Card Available")
+        or (a.get("admit_card_available") and a.get("status") not in ("Exam Scheduled", "Written Examination", "Submitted"))
     )
     exam_scheduled = sum(
         1 for a in apps
         if a.get("status") in ("Exam Scheduled", "Written Examination")
+    )
+    total_admit_or_scheduled = sum(
+        1 for a in apps
+        if a.get("status") in ("Admit Available", "Admit Card Available", "Exam Scheduled", "Written Examination")
+        or (a.get("admit_card_available") and a.get("status") != "Submitted")
     )
     rejected = sum(1 for a in apps if a.get("status") == "Rejected")
     shortlisted = sum(1 for a in apps if a.get("status") in ("Shortlisted", "Viva", "Selected"))
@@ -284,7 +290,8 @@ async def get_stats():
     return {
         "total_applications":      total,
         "submitted_count":         submitted,
-        "upcoming_exams_count":    admit_available + exam_scheduled,
+        "upcoming_exams_count":    total_admit_or_scheduled,
+        "admit_available_count":   admit_available,
         "shortlisted_count":       shortlisted,
         "rejected_count":          rejected,
         "pending_admit_cards":     submitted,

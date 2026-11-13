@@ -727,8 +727,11 @@ async def get_uploaded_file(filename: str):
     response_model=List[DocumentItemResponse],
     summary="List uploaded recruitment documents",
 )
-async def list_documents():
+async def list_documents(category: Optional[str] = None):
     docs = _load_docs()
+    if category:
+        cat_lower = category.lower().strip()
+        docs = [d for d in docs if d.get("category", "").lower().strip() == cat_lower]
     return [
         DocumentItemResponse(**{k: v for k, v in d.items()})
         for d in sorted(docs, key=lambda x: x.get("created_at", ""), reverse=True)
