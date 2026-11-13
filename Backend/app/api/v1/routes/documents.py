@@ -17,7 +17,7 @@ import re
 import json
 import time
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Tuple
 
 from fastapi import APIRouter, File, UploadFile, Form, Request
 from pydantic import BaseModel
@@ -112,6 +112,10 @@ class DocumentExtractionResponse(BaseModel):
     matched_applications: Optional[List[Any]] = []
     notes: Optional[str] = None
     raw_text_snippet: Optional[str] = None
+
+
+DocumentItemResponse.model_rebuild()
+DocumentExtractionResponse.model_rebuild()
 
 
 # ── Photo Extraction ──────────────────────────────────────────────────────────

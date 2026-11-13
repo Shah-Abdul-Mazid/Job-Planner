@@ -16,7 +16,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, File, UploadFile
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -230,6 +230,10 @@ class ApplicationUpdate(BaseModel):
     notes: Optional[str] = None
     choices: Optional[List[Any]] = None
     examinations: Optional[List[Any]] = None
+
+
+ApplicationCreate.model_rebuild()
+ApplicationUpdate.model_rebuild()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -536,7 +540,7 @@ async def delete_application(item_id: int):
 async def attach_pdf_to_application(
     item_id: int,
     pdf_type: str = Query("submit_pdf", description="submit_pdf, admit_pdf, or seat_plan_pdf"),
-    file: UploadFile = None,
+    file: Optional[UploadFile] = File(None),
 ):
     apps = _load_apps()
     target = None
