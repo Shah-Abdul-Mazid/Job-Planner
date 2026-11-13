@@ -199,6 +199,15 @@ export const api = {
   deleteApplication: (id: number): Promise<void> =>
     request<void>(`/items/${id}`, { method: 'DELETE' }),
 
+  attachPdf: (id: number, file: File, pdfType: 'submit_pdf' | 'admit_pdf' | 'seat_plan_pdf'): Promise<JobApplication> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return request<JobApplication>(`/items/${id}/attach-pdf?pdf_type=${pdfType}`, {
+      method: 'POST',
+      body: fd,
+    });
+  },
+
   // ── Seat Plan ─────────────────────────────────────────────────────────────
   getSeatPlan: (roll?: number): Promise<SeatPlanResponse> => {
     const query = roll ? `?roll=${roll}` : '';

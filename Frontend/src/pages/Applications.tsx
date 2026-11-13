@@ -415,6 +415,11 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
                             {/* Badges */}
                             <div className="flex flex-wrap gap-1.5 items-center">
                               <span className="badge-purple font-mono font-bold">#{app.job_id}</span>
+                              {app.status === 'Submitted' && (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                                  📝 Submitted
+                                </span>
+                              )}
                               {app.admit_card_available && <span className="badge-green font-semibold">✓ Admit Ready</span>}
                               {rollVal && (
                                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -427,6 +432,76 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
                                 </span>
                               )}
                             </div>
+
+                            {/* Seat Plan Sub-badge for Admit Available cards */}
+                            {(app.status === 'Admit Available' || app.admit_card_available) && (
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                {(app.seat_plan_status === 'Included in Admit' || app.seat_plan_status === 'Seat Plan Ready' || isExamActive) ? (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                    ✓ Seat Plan Ready
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 w-full justify-between">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                                      ⏳ Seat Plan Pending (TBA)
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSeatPlanRoll(parseInt(String(rollVal || '116683'), 10) || 116683);
+                                        setIsSeatPlanOpen(true);
+                                      }}
+                                      className="text-[10px] font-bold text-amber-300 hover:text-white px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 transition-all flex items-center gap-1"
+                                    >
+                                      + Upload Seat Plan PDF
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Multi-PDF Attachments Pill Bar */}
+                            {(app.submit_pdf_url || app.admit_pdf_url || app.seat_plan_pdf_url) && (
+                              <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-zinc-800/80">
+                                {app.submit_pdf_url && (
+                                  <a
+                                    href={app.submit_pdf_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-[10px] font-medium text-blue-300 bg-blue-950/40 hover:bg-blue-900/60 px-2 py-0.5 rounded border border-blue-500/30 transition-colors flex items-center gap-1"
+                                    title="View Application Submit PDF"
+                                  >
+                                    📄 App Copy
+                                  </a>
+                                )}
+                                {app.admit_pdf_url && (
+                                  <a
+                                    href={app.admit_pdf_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-[10px] font-medium text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-500/30 transition-colors flex items-center gap-1"
+                                    title="View Admit Card PDF"
+                                  >
+                                    🎫 Admit Card
+                                  </a>
+                                )}
+                                {app.seat_plan_pdf_url && (
+                                  <a
+                                    href={app.seat_plan_pdf_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-[10px] font-medium text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 px-2 py-0.5 rounded border border-purple-500/30 transition-colors flex items-center gap-1"
+                                    title="View Seat Plan PDF"
+                                  >
+                                    🗺️ Seat Plan
+                                  </a>
+                                )}
+                              </div>
+                            )}
 
                             {/* Scheduled Exam Callout Card — renders whenever exam is active */}
                             {isExamActive && (

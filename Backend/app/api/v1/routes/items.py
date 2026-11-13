@@ -76,8 +76,30 @@ def _build_app(id: int, data: dict) -> dict:
         "grade": data.get("grade") or "Grade-9",
         "tracking_id": data.get("tracking_id"),
         "user_id": data.get("user_id"),
+        "ref_no": data.get("ref_no"),
         "roll_number": data.get("roll_number"),
         "applicant_name": data.get("applicant_name", "SHAH ABDUL MAZID"),
+        "applicant_name_bn": data.get("applicant_name_bn"),
+        "father_name": data.get("father_name"),
+        "father_name_bn": data.get("father_name_bn"),
+        "mother_name": data.get("mother_name"),
+        "mother_name_bn": data.get("mother_name_bn"),
+        "date_of_birth": data.get("date_of_birth"),
+        "nid": data.get("nid"),
+        "birth_reg": data.get("birth_reg"),
+        "passport_id": data.get("passport_id"),
+        "gender": data.get("gender"),
+        "religion": data.get("religion"),
+        "marital_status": data.get("marital_status"),
+        "mobile_number": data.get("mobile_number"),
+        "email": data.get("email"),
+        "present_address": data.get("present_address"),
+        "permanent_address": data.get("permanent_address"),
+        "photo_url": data.get("photo_url"),
+        "submit_pdf_url": data.get("submit_pdf_url"),
+        "admit_pdf_url": data.get("admit_pdf_url"),
+        "seat_plan_pdf_url": data.get("seat_plan_pdf_url"),
+        "seat_plan_status": data.get("seat_plan_status") or ("Seat Plan Ready" if data.get("status") == "Exam Scheduled" else "Pending"),
         "application_date": data.get("application_date") or _utcnow()[:10],
         "deadline": data.get("deadline"),
         "status": data.get("status", "Submitted"),
@@ -135,8 +157,30 @@ class ApplicationCreate(BaseModel):
     grade: Optional[str] = "Grade-9"
     tracking_id: Optional[str] = None
     user_id: Optional[str] = None
+    ref_no: Optional[str] = None
     roll_number: Optional[str] = None
     applicant_name: Optional[str] = "SHAH ABDUL MAZID"
+    applicant_name_bn: Optional[str] = None
+    father_name: Optional[str] = None
+    father_name_bn: Optional[str] = None
+    mother_name: Optional[str] = None
+    mother_name_bn: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    nid: Optional[str] = None
+    birth_reg: Optional[str] = None
+    passport_id: Optional[str] = None
+    gender: Optional[str] = None
+    religion: Optional[str] = None
+    marital_status: Optional[str] = None
+    mobile_number: Optional[str] = None
+    email: Optional[str] = None
+    present_address: Optional[str] = None
+    permanent_address: Optional[str] = None
+    photo_url: Optional[str] = None
+    submit_pdf_url: Optional[str] = None
+    admit_pdf_url: Optional[str] = None
+    seat_plan_pdf_url: Optional[str] = None
+    seat_plan_status: Optional[str] = "Pending"
     application_date: Optional[str] = None
     deadline: Optional[str] = None
     status: Optional[str] = "Submitted"
@@ -154,8 +198,30 @@ class ApplicationUpdate(BaseModel):
     grade: Optional[str] = None
     tracking_id: Optional[str] = None
     user_id: Optional[str] = None
+    ref_no: Optional[str] = None
     roll_number: Optional[str] = None
     applicant_name: Optional[str] = None
+    applicant_name_bn: Optional[str] = None
+    father_name: Optional[str] = None
+    father_name_bn: Optional[str] = None
+    mother_name: Optional[str] = None
+    mother_name_bn: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    nid: Optional[str] = None
+    birth_reg: Optional[str] = None
+    passport_id: Optional[str] = None
+    gender: Optional[str] = None
+    religion: Optional[str] = None
+    marital_status: Optional[str] = None
+    mobile_number: Optional[str] = None
+    email: Optional[str] = None
+    present_address: Optional[str] = None
+    permanent_address: Optional[str] = None
+    photo_url: Optional[str] = None
+    submit_pdf_url: Optional[str] = None
+    admit_pdf_url: Optional[str] = None
+    seat_plan_pdf_url: Optional[str] = None
+    seat_plan_status: Optional[str] = "Pending"
     application_date: Optional[str] = None
     deadline: Optional[str] = None
     status: Optional[str] = None
@@ -376,8 +442,16 @@ async def create_application(payload: ApplicationCreate):
             if new_data.get("roll_number"):
                 ex["roll_number"] = new_data["roll_number"]
 
-        # Merge non-empty fields
-        for field in ("tracking_id", "user_id", "job_id", "grade", "applicant_name", "deadline", "notes"):
+        # Merge all non-empty fields
+        for field in (
+            "tracking_id", "user_id", "job_id", "grade", "applicant_name",
+            "applicant_name_bn", "father_name", "father_name_bn",
+            "mother_name", "mother_name_bn", "date_of_birth", "nid",
+            "birth_reg", "passport_id", "gender", "religion", "marital_status",
+            "mobile_number", "email", "present_address", "permanent_address",
+            "ref_no", "photo_url", "submit_pdf_url", "admit_pdf_url",
+            "seat_plan_pdf_url", "seat_plan_status", "deadline", "notes",
+        ):
             if new_data.get(field):
                 ex[field] = new_data[field]
 
@@ -456,3 +530,73 @@ async def delete_application(item_id: int):
     apps = [a for a in apps if a.get("id") != item_id]
     if len(apps) != before:
         _save_apps(apps)
+
+
+@router.post("/{item_id}/attach-pdf", summary="Attach submit, admit, or seat-plan PDF directly to job card")
+async def attach_pdf_to_application(
+    item_id: int,
+    pdf_type: str = Query("submit_pdf", description="submit_pdf, admit_pdf, or seat_plan_pdf"),
+    file: UploadFile = None,
+):
+    apps = _load_apps()
+    target = None
+    for a in apps:
+        if a.get("id") == item_id:
+            target = a
+            break
+    if not target:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    saved_filename = ""
+    if file:
+        import time
+        from app.api.v1.routes.documents import UPLOAD_DIR
+        saved_filename = f"{int(time.time())}_{file.filename}"
+        save_path = os.path.join(UPLOAD_DIR, saved_filename)
+        content = await file.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+        file_link = f"/api/v1/documents/file/{saved_filename}"
+
+        if pdf_type == "submit_pdf":
+            target["submit_pdf_url"] = file_link
+        elif pdf_type == "admit_pdf":
+            target["admit_pdf_url"] = file_link
+            target["admit_card_available"] = True
+            if target.get("status") == "Submitted":
+                target["status"] = "Admit Available"
+        elif pdf_type == "seat_plan_pdf":
+            target["seat_plan_pdf_url"] = file_link
+            target["seat_plan_status"] = "Seat Plan Ready"
+            target["status"] = "Exam Scheduled"
+            # Auto match center for candidate roll
+            cand_roll = target.get("roll_number")
+            if cand_roll and str(cand_roll).isdigit():
+                roll_int = int(cand_roll)
+                for c in BB_357_CENTRES:
+                    if c["roll_from"] <= roll_int <= c["roll_to"]:
+                        target["center_name"] = c["name"]
+                        target["center_address"] = c["area"]
+                        target["exam_date"] = "2026-11-13"
+                        target["exam_time"] = "03:00 PM – 04:00 PM"
+                        target["reporting_time"] = "02:00 PM"
+                        target["examinations"] = [{
+                            "id": 1,
+                            "item_id": target["id"],
+                            "exam_type": "100 Marks MCQ",
+                            "exam_date": "2026-11-13",
+                            "start_time": "03:00 PM",
+                            "end_time": "04:00 PM",
+                            "reporting_time": "02:00 PM",
+                            "center_name": c["name"],
+                            "center_address": c["area"],
+                            "status": "Scheduled",
+                            "schedule_status": "confirmed",
+                            "verified": True,
+                            "source_notice_ref": "Notice No. 357/2026",
+                        }]
+                        break
+
+    target["updated_at"] = _utcnow()
+    _save_apps(apps)
+    return target

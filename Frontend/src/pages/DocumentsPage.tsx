@@ -87,16 +87,30 @@ export const DocumentsPage: React.FC = () => {
     if (!extractedData) return;
     try {
       await api.createApplication({
-        organization_name: extractedData.organization_name || 'Bangladesh Bank',
-        post_name: extractedData.post_name || 'Senior Officer',
-        job_id: extractedData.job_id || '26101',
-        roll_number: extractedData.roll_number || '116683',
-        tracking_id: extractedData.tracking_id || '2052062-116683',
-        status: extractedData.status || (extractedData.schedule_status === 'confirmed' ? 'Exam Scheduled' : 'Admit Card Available'),
-        admit_card_available: true,
+        organization_name: extractedData.organization_name || 'Government Recruitment Authority',
+        post_name: extractedData.post_name || 'Officer',
+        job_id: extractedData.job_id || 'TBA',
+        roll_number: extractedData.roll_number || null,
+        tracking_id: extractedData.tracking_id || null,
+        user_id: extractedData.user_id || null,
+        ref_no: extractedData.ref_no || null,
+        applicant_name: extractedData.applicant_name || 'SHAH ABDUL MAZID',
+        father_name: extractedData.father_name || null,
+        mother_name: extractedData.mother_name || null,
+        date_of_birth: extractedData.date_of_birth || null,
+        nid: extractedData.nid || null,
+        birth_reg: extractedData.birth_reg || null,
+        passport_id: extractedData.passport_id || null,
+        mobile_number: extractedData.mobile_number || null,
+        email: extractedData.email || null,
+        present_address: extractedData.present_address || null,
+        permanent_address: extractedData.permanent_address || null,
+        photo_url: extractedData.photo_url || null,
+        status: extractedData.status || (extractedData.roll_number ? 'Admit Available' : 'Submitted'),
+        admit_card_available: Boolean(extractedData.admit_card_available || extractedData.roll_number),
         notes: `Extracted via Document Intelligence. ${extractedData.notes || ''}`
       });
-      setSaveSuccess(`Successfully imported ${extractedData.post_name} (Job #${extractedData.job_id}) as "${extractedData.status || 'Exam Scheduled'}"!`);
+      setSaveSuccess(`Successfully imported ${extractedData.post_name} (Job #${extractedData.job_id}) as "${extractedData.status || 'Submitted'}"!`);
       fetchDocuments();
     } catch (err: any) {
       setErrorMessage(`Save failed: ${err.message}`);

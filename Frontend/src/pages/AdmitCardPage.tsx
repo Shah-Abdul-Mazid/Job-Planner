@@ -79,14 +79,28 @@ export const AdmitCardPage: React.FC = () => {
     if (!extracted) return;
     try {
       await api.createApplication({
-        organization_name: extracted.organization_name || 'Combined 9 Banks & 2 FIs (Bangladesh Bank)',
-        post_name:         extracted.post_name || 'Senior Officer (General)',
-        job_id:            extracted.job_id || '26101',
-        tracking_id:       extracted.tracking_id || '26101-2052062-208657',
-        roll_number:       extracted.roll_number || '116683',
-        status:            'Admit Card Available',
-        admit_card_available: true,
-        notes:             extracted.notes || 'Admit card issued for Senior Officer. Exam Center, Date and Time to be announced via Seat Plan notice.',
+        organization_name: extracted.organization_name || 'Government Recruitment Authority',
+        post_name:         extracted.post_name || 'Officer',
+        job_id:            extracted.job_id || 'TBA',
+        tracking_id:       extracted.tracking_id || null,
+        user_id:           extracted.user_id || null,
+        ref_no:            extracted.ref_no || null,
+        roll_number:       extracted.roll_number || null,
+        applicant_name:    extracted.applicant_name || 'SHAH ABDUL MAZID',
+        father_name:       extracted.father_name || null,
+        mother_name:       extracted.mother_name || null,
+        date_of_birth:     extracted.date_of_birth || null,
+        nid:               extracted.nid || null,
+        birth_reg:         extracted.birth_reg || null,
+        passport_id:       extracted.passport_id || null,
+        mobile_number:     extracted.mobile_number || null,
+        email:             extracted.email || null,
+        present_address:   extracted.present_address || null,
+        permanent_address: extracted.permanent_address || null,
+        photo_url:         extracted.photo_url || null,
+        status:            extracted.status || (extracted.roll_number ? 'Admit Available' : 'Submitted'),
+        admit_card_available: Boolean(extracted.admit_card_available || extracted.roll_number),
+        notes:             extracted.notes || 'Admit card issued. Exam details to be announced.',
       });
       setSaved(true);
       await fetchDocs();
