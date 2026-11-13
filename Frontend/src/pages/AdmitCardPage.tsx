@@ -248,7 +248,7 @@ export const AdmitCardPage: React.FC = () => {
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Save as Application #26101
+                  Save to Applications
                 </button>
               )}
             </div>
@@ -268,7 +268,7 @@ export const AdmitCardPage: React.FC = () => {
       {(() => {
         const admitDocuments = documents.filter(
           (doc) =>
-            (doc.category === 'Admit Card' || doc.status === 'Admit Available' || doc.status === 'Admit Card Available') &&
+            doc.category === 'Admit Card' &&
             doc.status !== 'Submitted' &&
             doc.category !== 'Application Copy'
         );
