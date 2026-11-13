@@ -215,14 +215,24 @@ export const DocumentsPage: React.FC = () => {
             <LoadingState message="Parsing PDF text with bdjobtracker admit card extractor..." />
           ) : extractedData ? (
             <div className="space-y-4">
-              {/* Verification Guardrail Notice */}
-              {extractedData.requires_verification ? (
+              {/* Context Banner based on Document Type & Status */}
+              {(extractedData.status === 'Submitted' || (!extractedData.roll_number && !extractedData.exam_date)) ? (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-300 flex items-start space-x-2.5">
+                  <FileText className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Application Submission Extracted (Submitted)</span>
+                    <span>
+                      Applicant profile and registration confirmed. Saving will register this in the <strong>"Submitted"</strong> stage. Exam roll and venue will be added once Admit Card / Seat Plan is published.
+                    </span>
+                  </div>
+                </div>
+              ) : (extractedData.seat_plan_status === 'Pending' || (!extractedData.exam_date && extractedData.roll_number)) ? (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start space-x-2.5">
                   <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block">Guardrail Active: Exam Date To Be Announced</span>
+                    <span className="font-bold block">Admit Card Extracted (Seat Plan TBA)</span>
                     <span>
-                      Admit card text indicates dates will be announced later. System will not invent an unconfirmed date until official notice is verified.
+                      Exam Roll #{extractedData.roll_number} assigned. Venue and date will be announced later in official Seat Plan notice.
                     </span>
                   </div>
                 </div>
@@ -308,12 +318,12 @@ export const DocumentsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Exam & Center Venue if present */}
-              {(extractedData.exam_date || extractedData.center_name) && (
+              {/* Exam & Center Venue if present (Only for Admit Cards with venue or confirmed Seat Plans) */}
+              {extractedData.status !== 'Submitted' && extractedData.exam_date && extractedData.center_name && extractedData.center_name !== 'To Be Announced' && (
                 <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-1.5 text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-amber-300">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Exam Schedule: {extractedData.exam_date || 'Nov 13, 2026'} ({extractedData.exam_time || '03:00 PM – 04:00 PM'})</span>
+                    <span>Exam Schedule: {extractedData.exam_date} {extractedData.exam_time ? `(${extractedData.exam_time})` : ''}</span>
                   </div>
                   {extractedData.center_name && (
                     <div className="flex items-start gap-1.5 text-zinc-300">

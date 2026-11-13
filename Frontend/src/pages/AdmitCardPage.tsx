@@ -214,14 +214,14 @@ export const AdmitCardPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { icon: Building,     label: 'Organization', value: extracted.organization_name || 'Combined 9 Banks & 2 FIs' },
-                  { icon: FileText,     label: 'Post',         value: extracted.post_name || 'Senior Officer (General)' },
-                  { icon: FileCheck2,   label: 'Job ID',       value: extracted.job_id || '26101' },
-                  { icon: ShieldCheck,  label: 'Roll Number',  value: extracted.roll_number || '116683' },
-                  { icon: FileCheck2,   label: 'Tracking ID',  value: extracted.tracking_id || '26101-2052062-208657' },
-                  { icon: Calendar,     label: 'Applicant',    value: 'SHAH ABDUL MAZID' },
+                  { icon: Building,     label: 'Organization', value: extracted.organization_name || '—' },
+                  { icon: FileText,     label: 'Post',         value: extracted.post_name || '—' },
+                  { icon: FileCheck2,   label: 'Job ID',       value: extracted.job_id || 'TBA' },
+                  { icon: ShieldCheck,  label: 'Roll Number',  value: extracted.roll_number || 'Awaiting' },
+                  { icon: FileCheck2,   label: 'Tracking ID',  value: extracted.tracking_id || extracted.ref_no || '—' },
+                  { icon: Calendar,     label: 'Applicant',    value: extracted.applicant_name || 'SHAH ABDUL MAZID' },
                   { icon: Clock,        label: 'Exam Schedule',value: extracted.exam_date ? `${extracted.exam_date} (${extracted.exam_time || ''})` : 'To Be Announced via Seat Plan' },
-                  { icon: MapPin,       label: 'Exam Center',  value: extracted.center_name || 'Allocated via Seat Plan Notice' },
+                  { icon: MapPin,       label: 'Exam Center',  value: (extracted.center_name && extracted.center_name !== 'To Be Announced') ? extracted.center_name : 'Allocated via Seat Plan Notice' },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="p-3 rounded-xl bg-zinc-800/60 border border-zinc-700/40">
                     <div className="flex items-center gap-1.5 mb-1">

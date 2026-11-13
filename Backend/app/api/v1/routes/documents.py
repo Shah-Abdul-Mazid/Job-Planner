@@ -98,14 +98,14 @@ class DocumentExtractionResponse(BaseModel):
     photo_url: Optional[str] = None
     exam_date: Optional[str] = None
     exam_time: Optional[str] = None
-    center_name: Optional[str] = "To Be Announced"
-    schedule_status: str = "to_be_announced"
+    center_name: Optional[str] = None
+    schedule_status: str = "not_scheduled"
     confidence_score: float = 0.95
     requires_verification: bool = False
     document_type: str = "applicant_copy"   # "applicant_copy", "admit_card", "tracking_page", "seat_plan"
     status: str = "Submitted"               # "Submitted", "Admit Available", "Exam Scheduled"
     admit_card_available: bool = False
-    seat_plan_status: Optional[str] = "Pending"  # "Included in Admit", "Seat Plan Ready", "Pending"
+    seat_plan_status: Optional[str] = None  # "Included in Admit", "Seat Plan Ready", "Pending", or None
     submit_pdf_url: Optional[str] = None
     admit_pdf_url: Optional[str] = None
     seat_plan_pdf_url: Optional[str] = None
@@ -470,22 +470,23 @@ def parse_recruitment_text(
     # 16. Exam Date, Time, Center & Seat Plan Matching
     exam_date = None
     exam_time = None
-    center_name = "To Be Announced"
-    schedule_status = "to_be_announced"
-    seat_plan_status = "Pending"
+    center_name = None
+    schedule_status = "not_scheduled"
+    seat_plan_status = None
     matched_apps = []
 
-    med = re.search(r"(?i)Exam\s*Date\s*&\s*Time\s*[:|\-]?\s*([^\n]+)", candidate_block)
-    if med:
-        cand_d = med.group(1).strip()
-        if "exam center" not in cand_d.lower() and "to be announced" not in cand_d.lower():
-            exam_date = cand_d
+    if doc_type == "admit_card":
+        med = re.search(r"(?i)Exam\s*Date\s*&\s*Time\s*[:|\-]?\s*([^\n]+)", candidate_block)
+        if med:
+            cand_d = med.group(1).strip()
+            if "exam center" not in cand_d.lower() and "to be announced" not in cand_d.lower():
+                exam_date = cand_d
 
-    mec = re.search(r"(?i)Exam\s*Center\s*[:|\-]?\s*([^\n]+)", candidate_block)
-    if mec:
-        cand_center = mec.group(1).strip()
-        if "to be announced" not in cand_center.lower():
-            center_name = cand_center
+        mec = re.search(r"(?i)Exam\s*Center\s*[:|\-]?\s*([^\n]+)", candidate_block)
+        if mec:
+            cand_center = mec.group(1).strip()
+            if "to be announced" not in cand_center.lower():
+                center_name = cand_center
 
     # 17. Seat Plan Workflows
     if doc_type == "seat_plan":
@@ -560,8 +561,13 @@ def parse_recruitment_text(
             exam_date = None
             center_name = "To Be Announced"
     else:
-        # Application Submit PDF
+        # Application Submit PDF (Applicant's Copy, Tracking Page)
         seat_plan_status = None
+        exam_date = None
+        exam_time = None
+        center_name = None
+        schedule_status = "not_scheduled"
+        admit_available = False
 
     # 18. Photo Extraction
     photo_url = None
