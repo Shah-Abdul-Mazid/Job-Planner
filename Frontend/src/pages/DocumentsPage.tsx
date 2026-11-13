@@ -95,23 +95,34 @@ export const DocumentsPage: React.FC = () => {
         user_id: extractedData.user_id || null,
         ref_no: extractedData.ref_no || null,
         applicant_name: extractedData.applicant_name || 'SHAH ABDUL MAZID',
+        applicant_name_bn: extractedData.applicant_name_bn || null,
         father_name: extractedData.father_name || null,
+        father_name_bn: extractedData.father_name_bn || null,
         mother_name: extractedData.mother_name || null,
+        mother_name_bn: extractedData.mother_name_bn || null,
         date_of_birth: extractedData.date_of_birth || null,
         nid: extractedData.nid || null,
         birth_reg: extractedData.birth_reg || null,
         passport_id: extractedData.passport_id || null,
+        gender: extractedData.gender || null,
+        religion: extractedData.religion || null,
+        marital_status: extractedData.marital_status || null,
         mobile_number: extractedData.mobile_number || null,
         email: extractedData.email || null,
         present_address: extractedData.present_address || null,
         permanent_address: extractedData.permanent_address || null,
         photo_url: extractedData.photo_url || null,
+        submit_pdf_url: extractedData.submit_pdf_url || null,
+        admit_pdf_url: extractedData.admit_pdf_url || null,
+        seat_plan_pdf_url: extractedData.seat_plan_pdf_url || null,
+        seat_plan_status: extractedData.seat_plan_status || (extractedData.status === 'Exam Scheduled' ? 'Seat Plan Ready' : 'Pending'),
         status: extractedData.status || (extractedData.roll_number ? 'Admit Available' : 'Submitted'),
         admit_card_available: Boolean(extractedData.admit_card_available || extractedData.roll_number),
         notes: `Extracted via Document Intelligence. ${extractedData.notes || ''}`
       });
       setSaveSuccess(`Successfully imported ${extractedData.post_name} (Job #${extractedData.job_id}) as "${extractedData.status || 'Submitted'}"!`);
       fetchDocuments();
+      window.dispatchEvent(new CustomEvent('application-created'));
     } catch (err: any) {
       setErrorMessage(`Save failed: ${err.message}`);
     }
@@ -122,11 +133,12 @@ export const DocumentsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
-            Document Intelligence &amp; Admit Card Management
+          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <FileText className="w-6 h-6 text-purple-400" />
+            Application Copy &amp; Submit PDF Upload
           </h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            AI-powered PDF parser extracting Roll Numbers, Job IDs, and examination venues with human verification.
+            Upload Applicant's Copy [PAID], Tracking Page, or Application Form to register your job submission and applicant profile.
           </p>
         </div>
 

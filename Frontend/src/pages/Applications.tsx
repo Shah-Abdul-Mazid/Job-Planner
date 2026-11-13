@@ -118,6 +118,7 @@ export const Applications: React.FC<ApplicationsPageProps> = ({
         tracking_id: target?.tracking_id || undefined,
         roll_number: target?.roll_number || undefined,
       });
+      window.dispatchEvent(new CustomEvent('application-updated'));
     } catch (err: any) {
       console.warn(`Could not sync status update: ${err.message}`);
     }

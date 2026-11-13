@@ -14,7 +14,7 @@ import { AssistantPage } from './pages/AssistantPage';
 import { NotificationsDrawer } from './components/layout/NotificationsDrawer';
 import { ApplicationModal } from './components/applications/ApplicationModal';
 import { api } from './services/api';
-import { ApplicationCreatePayload } from './types';
+import { ApplicationCreatePayload, DashboardStats } from './types';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavItemKey>('dashboard');
@@ -22,19 +22,35 @@ export function App() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isGlobalCreateOpen, setIsGlobalCreateOpen] = useState(false);
   const [isBackendConnected, setIsBackendConnected] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [pendingSeatPlanCount, setPendingSeatPlanCount] = useState<number>(0);
+
+  const fetchGlobalStats = async () => {
+    try {
+      const stats = await api.getDashboardStats();
+      setDashboardStats(stats);
+      setIsBackendConnected(true);
+
+      const appRes = await api.getApplications({ page_size: 100 });
+      const pending = (appRes.items || []).filter(
+        a => (a.status === 'Admit Available' || a.admit_card_available) && a.seat_plan_status === 'Pending'
+      ).length;
+      setPendingSeatPlanCount(pending);
+    } catch {
+      setIsBackendConnected(false);
+    }
+  };
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        await api.getDashboardStats();
-        setIsBackendConnected(true);
-      } catch {
-        setIsBackendConnected(false);
-      }
+    fetchGlobalStats();
+    const interval = setInterval(fetchGlobalStats, 8000);
+    window.addEventListener('application-created', fetchGlobalStats);
+    window.addEventListener('application-updated', fetchGlobalStats);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('application-created', fetchGlobalStats);
+      window.removeEventListener('application-updated', fetchGlobalStats);
     };
-    checkHealth();
-    const interval = setInterval(checkHealth, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleGlobalCreate = async (payload: ApplicationCreatePayload) => {
@@ -51,9 +67,10 @@ export function App() {
     companies: 'Companies & Organizations',
     interviews: 'Interviews & Examinations',
     calendar: 'Examination Calendar',
+    'app-upload': 'Application Copy / Submit PDF Upload',
     'admit-upload': 'Admit Card PDF Upload & Extraction',
     'seatplan-upload': 'Seat Plan & Exam Schedule PDF Upload',
-    documents: 'Document Intelligence',
+    documents: 'Application Copy & Document Upload',
     assistant: 'AI Recruitment Assistant',
     notifications: 'Notifications & Alerts',
   };
@@ -74,6 +91,10 @@ export function App() {
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        submittedCount={dashboardStats?.submitted_count ?? 5}
+        admitCount={dashboardStats?.upcoming_exams_count ?? 1}
+        pendingSeatPlanCount={pendingSeatPlanCount}
+        totalApplicationsCount={dashboardStats?.total_applications ?? 6}
       />
 
       {/* Main Content */}
@@ -108,7 +129,7 @@ export function App() {
             {currentTab === 'calendar' && <CalendarPage />}
             {currentTab === 'admit-upload' && <AdmitCardPage />}
             {currentTab === 'seatplan-upload' && <SeatPlanPage />}
-            {currentTab === 'documents' && <DocumentsPage />}
+            {(currentTab === 'app-upload' || currentTab === 'documents') && <DocumentsPage />}
             {currentTab === 'assistant' && <AssistantPage />}
           </div>
         </main>

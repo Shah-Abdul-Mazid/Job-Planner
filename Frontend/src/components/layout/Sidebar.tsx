@@ -12,6 +12,7 @@ export type NavItemKey =
   | 'companies' 
   | 'interviews' 
   | 'calendar' 
+  | 'app-upload'
   | 'admit-upload'
   | 'seatplan-upload'
   | 'documents' 
@@ -24,30 +25,93 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   pendingAlertsCount?: number;
+  submittedCount?: number;
+  admitCount?: number;
+  pendingSeatPlanCount?: number;
+  totalApplicationsCount?: number;
 }
 
 const MAIN_MENU = [
   { key: 'dashboard' as NavItemKey,    label: 'Dashboard',     icon: LayoutDashboard },
   { key: 'resume' as NavItemKey,       label: 'Resume / CV',   icon: UserCheck },
-  { key: 'applications' as NavItemKey, label: 'Applications',  icon: Briefcase },
+  { key: 'applications' as NavItemKey, label: 'Applications',  icon: Briefcase, isAppList: true },
   { key: 'companies' as NavItemKey,    label: 'Companies',     icon: Building2 },
   { key: 'interviews' as NavItemKey,   label: 'Interviews',    icon: Users },
   { key: 'calendar' as NavItemKey,     label: 'Calendar',      icon: Calendar },
 ];
 
 const TOOLS_MENU = [
-  { key: 'admit-upload' as NavItemKey,    label: 'Admit Card Upload',     icon: FileCheck2 },
-  { key: 'seatplan-upload' as NavItemKey, label: 'Seat Plan & Schedule',  icon: FileSpreadsheet },
-  { key: 'assistant' as NavItemKey,       label: 'AI Coach & Intel',      icon: Bot },
-  { key: 'notifications' as NavItemKey,   label: 'Notifications',         icon: Bell, hasBadge: true },
+  { key: 'app-upload' as NavItemKey,      label: 'Application PDF Upload', icon: FileText,        kind: 'app' },
+  { key: 'admit-upload' as NavItemKey,    label: 'Admit Card Upload',      icon: FileCheck2,      kind: 'admit' },
+  { key: 'seatplan-upload' as NavItemKey, label: 'Seat Plan & Schedule',   icon: FileSpreadsheet, kind: 'seatplan' },
+  { key: 'assistant' as NavItemKey,       label: 'AI Coach & Intel',       icon: Bot,             kind: 'bot' },
+  { key: 'notifications' as NavItemKey,   label: 'Notifications',          icon: Bell,            kind: 'bell', hasBadge: true },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  currentTab, onTabChange, collapsed, onToggleCollapse, pendingAlertsCount = 2,
+  currentTab,
+  onTabChange,
+  collapsed,
+  onToggleCollapse,
+  pendingAlertsCount = 2,
+  submittedCount = 0,
+  admitCount = 0,
+  pendingSeatPlanCount = 0,
+  totalApplicationsCount = 0,
 }) => {
-  const renderItem = (item: { key: NavItemKey; label: string; icon: any; hasBadge?: boolean }) => {
+  const renderItem = (item: {
+    key: NavItemKey;
+    label: string;
+    icon: any;
+    hasBadge?: boolean;
+    kind?: string;
+    isAppList?: boolean;
+  }) => {
     const Icon = item.icon;
     const isActive = currentTab === item.key;
+
+    // Determine badge for item
+    let badgeContent: React.ReactNode = null;
+    if (item.hasBadge && pendingAlertsCount > 0) {
+      badgeContent = (
+        <span className="w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
+          {pendingAlertsCount}
+        </span>
+      );
+    } else if (item.isAppList && totalApplicationsCount > 0) {
+      badgeContent = (
+        <span className="px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+          {totalApplicationsCount}
+        </span>
+      );
+    } else if (item.kind === 'app' && submittedCount > 0) {
+      badgeContent = (
+        <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+          {submittedCount}
+        </span>
+      );
+    } else if (item.kind === 'admit' && admitCount > 0) {
+      badgeContent = (
+        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+          {admitCount}
+        </span>
+      );
+    } else if (item.kind === 'seatplan') {
+      if (pendingSeatPlanCount > 0) {
+        badgeContent = (
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[10px] font-bold animate-pulse" title="Seat Plan notice pending for admit card">
+            ⏳ {pendingSeatPlanCount} TBA
+          </span>
+        );
+      } else {
+        badgeContent = (
+          <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold">
+            ✓ Ready
+          </span>
+        );
+      }
+    }
+
     return (
       <button
         key={item.key}
@@ -78,11 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className={`text-xs sm:text-sm font-medium flex-1 text-left ${isActive ? 'text-white' : ''}`}>
               {item.label}
             </span>
-            {item.hasBadge && pendingAlertsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
-                {pendingAlertsCount}
-              </span>
-            )}
+            {badgeContent}
           </>
         )}
 
